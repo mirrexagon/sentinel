@@ -39,9 +39,7 @@ use bot::Bot;
 pub fn main() {
     env_logger::init().expect("Failed to intialize env_logger");
 
-    let mut bot = Bot::from_bot_token(
-		&env::var("DISCORD_TOKEN").expect("Expected token")
-    ).unwrap();
+    let mut bot = Bot::from_bot_token(&env::var("DISCORD_TOKEN").expect("Expected token")).unwrap();
 
     bot.connect().expect("Connecting failed");
 
