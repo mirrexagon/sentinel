@@ -17,7 +17,9 @@ pub struct Bot {
 
 impl Bot {
     pub fn from_bot_token(bot_token: &str) -> Result<Self> {
+        info!("Logging in...");
     	let discord = Discord::from_bot_token(bot_token)?;
+        info!("Logged in!");
 
     	Ok(Bot {
     	   discord: discord,
@@ -27,12 +29,16 @@ impl Bot {
     }
 
     pub fn connect(&mut self) -> Result<()> {
+        info!("Connecting...");
+
         let (connection, ready) = self.discord.connect()?;
         let state = State::new(ready);
     	connection.sync_calls(&state.all_private_channels());
 
         self.connection = Some(connection);
         self.state = Some(state);
+        
+        info!("Connected!.");
 
         Ok(())
     }
