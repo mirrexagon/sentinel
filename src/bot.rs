@@ -133,7 +133,7 @@ impl Bot {
                         info!("[DJ] Quitting.");
                         vchan.map(|(sid, _)| connection.drop_voice(sid));
                     } else {
-                        println!("[DJ] Playing: {}", argument);
+                        info!("[DJ] Playing: {}", argument);
                         let output = if let Some((server_id, channel_id)) = vchan {
                             match discord::voice::open_ytdl_stream(argument) {
                                 Ok(stream) => {
