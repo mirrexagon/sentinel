@@ -25,9 +25,6 @@ pub use error::Result;
 // --- Use --- //
 use std::env;
 
-use discord::{Discord, State};
-use discord::model::Event;
-
 use bot::Bot;
 // --- ==== --- //
 
@@ -40,7 +37,7 @@ use bot::Bot;
 // - Allow per-user colors by giving personal roles.
 
 pub fn main() {
-    env_logger::init();
+    env_logger::init().expect("Failed to intialize env_logger");
 
     let mut bot = Bot::from_bot_token(
 		&env::var("DISCORD_TOKEN").expect("Expected token")
