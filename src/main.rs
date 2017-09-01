@@ -13,6 +13,7 @@ extern crate discord;
 // --- Modules --- //
 mod error;
 mod bot;
+mod modules;
 // --- ==== --- //
 
 
@@ -41,7 +42,12 @@ pub fn main() {
 
     let mut bot = Bot::from_bot_token(&env::var("DISCORD_TOKEN").expect("Expected token")).unwrap();
 
-    bot.connect().expect("Connecting failed");
+    // ---
 
+    bot.load_module(modules::dj::Dj);
+
+    // ---
+
+    bot.connect().expect("Connecting failed");
     bot.run().unwrap();
 }

@@ -16,5 +16,5 @@ stdenv.mkDerivation {
   ];
 
   DISCORD_TOKEN = lib.readFile ./token;
-  RUST_LOG = "info";
+  #RUST_LOG = "info";
 }

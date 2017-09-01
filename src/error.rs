@@ -15,5 +15,8 @@ quick_error! {
         }
 
         NotConnected {}
+
+        ModuleNotLoaded {}
+        ModuleAlreadyLoaded {}
     }
 }
