@@ -65,7 +65,7 @@ impl VecStream {
 impl Read for VecStream {
     fn read(&mut self, buf: &mut [u8]) -> ::std::io::Result<usize> {
         for i in 0..buf.len() {
-            if self.1 > self.0.len() {
+            if self.1 >= self.0.len() {
                 return Ok(i);
             }
 
@@ -85,12 +85,15 @@ fn create_espeak_source(text: &str) -> DiscordResult<Box<discord::voice::AudioSo
     let stereo = false;
 
     use std::process::{Command, Stdio};
-    use std::fs::File;
+    use std::fs;
 
     // ---
 
 	let mut child = Command::new("espeak")
 		.arg("-w").arg(TMP_FILE)
+		//.arg("-p").arg("0")
+		//.arg("-s").arg("200")
+		//.arg("-v").arg("english-us")
 		.stdin(Stdio::piped())
 		.stdout(Stdio::null())
 		.stderr(Stdio::null())
@@ -117,11 +120,21 @@ fn create_espeak_source(text: &str) -> DiscordResult<Box<discord::voice::AudioSo
 
 	// ---
 
-    let f = File::open(TMP_FILE_2)?;
+    let data: Vec<u8>;
+
+    {
+        let f = fs::File::open(TMP_FILE_2)?;
+        data = f.bytes().map(|b| b.unwrap()).collect();
+    }
 
     // ---
 
-	Ok(discord::voice::create_pcm_source(stereo, f))
+    fs::remove_file(TMP_FILE);
+    fs::remove_file(TMP_FILE_2);
+
+    // ---
+
+	Ok(discord::voice::create_pcm_source(stereo, VecStream::new(data)))
 }
 // --- ==== --- //
 
@@ -183,6 +196,13 @@ impl Bot {
                         let reply = format!("I heard you.");
                         self.discord.send_message(message.channel_id, &reply, "", false)?;
                     }
+
+                    for s in self.state.as_ref().unwrap().servers() {
+                        println!("{}", s.name);
+                    }
+
+                    let servers = self.state.as_ref().unwrap().unavailable_servers();
+                    println!("{:?}", servers);
 
                     match self.state.as_ref().unwrap().find_voice_user(message.author.id) {
                         Some((server_id_maybe, channel_id)) => {

@@ -12,7 +12,9 @@ stdenv.mkDerivation {
     openssl
     libsodium
     libopus
+
     ffmpeg
+    espeak
   ];
 
   DISCORD_TOKEN = lib.readFile ./token;
