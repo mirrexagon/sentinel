@@ -3,6 +3,7 @@
 // - Auth, admin, help
 // - Markov: per user, per channel, everything
 
+
 // --- External crates --- //
 #[macro_use]
 extern crate log;
@@ -37,23 +38,6 @@ use std::io::{Read, Write};
 
 
 // --- espeak source --- //
-struct ProcessStream(::std::process::Child);
-
-impl Read for ProcessStream {
-	fn read(&mut self, buf: &mut [u8]) -> ::std::io::Result<usize> {
-		self.0.stdout.as_mut().expect("missing stdout").read(buf)
-	}
-}
-
-impl Drop for ProcessStream {
-	fn drop(&mut self) {
-		// If we can't kill it, it's dead already or out of our hands
-		let _ = self.0.kill();
-	}
-}
-
-// ---
-
 struct VecStream(Vec<u8>, usize);
 
 impl VecStream {
@@ -90,16 +74,17 @@ fn create_espeak_source(text: &str) -> DiscordResult<Box<discord::voice::AudioSo
     // ---
 
 	let mut child = Command::new("espeak")
-		.arg("-w").arg(TMP_FILE)
+		.arg("--stdout")
 		//.arg("-p").arg("0")
 		//.arg("-s").arg("200")
 		//.arg("-v").arg("english-us")
 		.stdin(Stdio::piped())
-		.stdout(Stdio::null())
+		.stdout(Stdio::piped())
 		.stderr(Stdio::null())
 		.spawn()?;
 
     {
+
         let mut stdin = child.stdin.as_mut().expect("Failed to open stdin");
         stdin.write_all(text.as_bytes())?;
     }
@@ -136,6 +121,10 @@ fn create_espeak_source(text: &str) -> DiscordResult<Box<discord::voice::AudioSo
 
 	Ok(discord::voice::create_pcm_source(stereo, VecStream::new(data)))
 }
+// --- ==== --- //
+
+
+// --- ==== --- //
 // --- ==== --- //
 
 
@@ -183,10 +172,10 @@ impl Bot {
 
     fn process_event(&mut self, event: &DiscordEvent) -> DiscordResult<()> {
         lazy_static! {
-            static ref JOIN_COMMAND_REGEX: Regex = Regex::new(r"^Sentinel, join").unwrap();
-            static ref LEAVE_COMMAND_REGEX: Regex = Regex::new(r"^Sentinel, leave").unwrap();
-            static ref QUIT_COMMAND_REGEX: Regex = Regex::new(r"^Sentinel, quit").unwrap();
-            static ref SAY_COMMAND_REGEX: Regex = Regex::new(r"^say (.+)$").unwrap();
+            static ref JOIN_COMMAND_REGEX: Regex = Regex::new(r"^&join").unwrap();
+            static ref LEAVE_COMMAND_REGEX: Regex = Regex::new(r"^&leave").unwrap();
+            static ref QUIT_COMMAND_REGEX: Regex = Regex::new(r"^&quit").unwrap();
+            static ref SAY_COMMAND_REGEX: Regex = Regex::new(r"^&say (.+)$").unwrap();
         }
 
         match *event {
@@ -209,17 +198,6 @@ impl Bot {
                             let voice = self.connection.as_mut().unwrap().voice(server_id_maybe);
                             voice.connect(channel_id);
                             voice.set_deaf(true);
-
-                            match discord::voice::open_ytdl_stream("https://www.youtube.com/watch?v=Sa74OesRIlc") {
-                                Ok(stream) => {
-                                    voice.play(stream);
-                                }
-
-                                Err(e) => {
-                                    let reply = format!("Error: {}", e);
-                                    self.discord.send_message(message.channel_id, &reply, "", false)?;
-                                }
-                            }
 
                             self.in_voice_channel = true;
                             self.current_server = server_id_maybe;
