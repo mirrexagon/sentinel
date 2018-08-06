@@ -6,9 +6,9 @@ authors = ["Andrew Abbott <mirrexagon@mirrexagon.com>"]
 [dependencies]
 log = "0.4"
 env_logger = "0.5"
-
-discord = { git = "https://github.com/tinaun/discord-rs" }
-
 regex = "0.2"
-
 lazy_static = "1.0"
+
+[dependencies.serenity]
+version = "0.5.5"
+features = ["voice"]
