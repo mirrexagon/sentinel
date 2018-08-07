@@ -3,26 +3,28 @@
 // - Some kind of auth and permissions
 // - Voice commands
 
-
 // -- Crates --
 extern crate serenity;
-
 
 // -- Use --
 use std::env;
 
-use serenity::prelude::*;
 use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
-
+use serenity::prelude::*;
 
 // -- Handler --
 struct Handler;
 
 impl EventHandler for Handler {
     fn message(&self, ctx: Context, msg: Message) {
-        println!("Message received ({}#{} in {:?}): {}", msg.author.name,
-                msg.author.discriminator, msg.channel_id.name(), msg.content);
+        println!(
+            "Message received ({}#{} in {:?}): {}",
+            msg.author.name,
+            msg.author.discriminator,
+            msg.channel_id.name(),
+            msg.content
+        );
 
         if msg.content == "!ping" {
             if let Err(why) = msg.channel_id.say("Pong!") {
@@ -38,12 +40,10 @@ impl EventHandler for Handler {
     }
 }
 
-
 // -- Main --
 fn main() {
     // Configure the client with your Discord bot token in the environment.
-    let token = env::var("DISCORD_TOKEN")
-        .expect("Expected a token in the environment");
+    let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
     let mut client = Client::new(&token, Handler).expect("Err creating client");
 
     if let Err(why) = client.start() {
