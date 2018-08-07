@@ -1,7 +1,7 @@
 // TODO:
-// - Markov
-// - Some kind of auth and permissions
 // - Voice commands
+// - Do error propogation properly in the modules
+// - Make a more automagic module system
 
 // -- Crates --
 #[macro_use] extern crate serenity;
