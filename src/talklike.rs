@@ -1,3 +1,7 @@
+// Ideas:
+// - Make it per user per server? Users would expect it to keep
+// what they say per server.
+
 // -- Use --
 use std::fs;
 use std::path::PathBuf;
