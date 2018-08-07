@@ -14,10 +14,12 @@ mod talklike;
 
 // -- Use --
 use std::env;
+use std::collections::HashSet;
 
 use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
 use serenity::framework::standard::{Args, DispatchError, StandardFramework, HelpBehaviour, CommandOptions, help_commands};
+use serenity::http;
 use serenity::prelude::*;
 
 // -- Constants --
@@ -41,13 +43,24 @@ fn main() {
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
     let mut client = Client::new(&token, Handler).expect("Err creating client");
 
+    let owners = match http::get_current_application_info() {
+        Ok(info) => {
+            let mut set = HashSet::new();
+            set.insert(info.owner.id);
+
+            set
+        },
+        Err(why) => panic!("Couldn't get application info: {:?}", why),
+    };
+
     client.with_framework(
         StandardFramework::new()
         .configure(|c| c
             .allow_whitespace(false)
             .on_mention(true)
             .prefix(".")
-            .delimiter(" "))
+            .delimiter(" ")
+            .owners(owners))
 
         .after(|_, _, command_name, error| {
             match error {
@@ -67,13 +80,17 @@ fn main() {
         })
 
         .help(help_commands::with_embeds)
+        .simple_bucket("save", 5)
+        .simple_bucket("markovgen", 2)
         .command("save", |c| c
-                .cmd(meta::commands::save))
+                .cmd(meta::commands::save)
+                .bucket("save"))
         .command("quit", |c| c
-                .cmd(meta::commands::quit))                
+                .cmd(meta::commands::quit)
+                .owners_only(true))
         .command("talklikeme", |c| c
                 .cmd(talklike::commands::talklikeme)
-         )
+                .bucket("markovgen"))
     );
 
     talklike::init(&mut client);
