@@ -23,12 +23,14 @@ const MARKOV_ORDER: usize = 1;
 // -- Data --
 pub struct Data {
     by_user: HashMap<UserId, markov::Chain<String>>,
+    data_dir: PathBuf,
 }
 
 impl Data {
     pub fn new() -> Self {
         Data {
             by_user: HashMap::new(),
+            data_dir: PathBuf::new(), // TODO: Don't store this.
         }
     }
 }
@@ -42,6 +44,7 @@ impl typemap::Key for TalkLike {
 
 pub fn init_client(client: &mut Client, data_dir: &Path) -> SerenityResult<()> {
     let mut module_data = Data::new();
+    module_data.data_dir = PathBuf::from(data_dir);
 
     if data_dir.is_dir() {
         for entry in data_dir.read_dir()? {
@@ -99,6 +102,9 @@ pub fn init_framework(framework: StandardFramework) -> StandardFramework {
         .command("talk like", |c| {
             c.cmd(commands::talk_like).bucket("talklikegen")
         })
+        .command("clear my talk data", |c| {
+            c.cmd(commands::clear_my_talk_data)
+        })
 }
 
 pub fn save_data(ctx: &Context, data_dir: &Path) -> SerenityResult<()> {
@@ -147,6 +153,21 @@ pub fn on_message(ctx: &Context, msg: &Message) {
 mod commands {
     use super::TalkLike;
     use serenity::model::prelude::*;
+
+    command!(
+        clear_my_talk_data(ctx, msg, _args) {
+            let mut data = ctx.data.lock();
+            let mut module_data = data.get_mut::<TalkLike>().unwrap();
+
+            module_data.by_user.remove(&msg.author.id);
+            super::save_data(&ctx, &module_data.data_dir)
+                .map_err(|err| error!("Error saving talklike data after clear: {:?}", err));
+
+            if let Err(_) = msg.channel_id.say("Your talking database has been cleared.") {
+                error!("Error sending error reponse to clearinga user's talklike data");
+            }
+        }
+    );
 
     command!(
         talk_like(ctx, msg, args) {
