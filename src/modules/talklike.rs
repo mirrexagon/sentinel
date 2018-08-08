@@ -1,6 +1,7 @@
 // Ideas:
 // - Save periodically. Do this for all modules in main?
 // - Disarm @everyone, and maybe other mentions too.
+// - Maybe add a command to read all of a user's message history in a channel.
 // - Make it per user per server? Users would expect it to keep
 // what they say per server.
 
