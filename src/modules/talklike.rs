@@ -1,5 +1,5 @@
 // Ideas:
-// - Ignore commands.
+// - Save periodically. Do this for all modules in main?
 // - Make it per user per server? Users would expect it to keep
 // what they say per server.
 
