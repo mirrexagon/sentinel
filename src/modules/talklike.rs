@@ -5,86 +5,112 @@
 
 // -- Use --
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 
 use serenity::model::id::UserId;
 use serenity::model::channel::Message;
+use serenity::framework::standard::StandardFramework;
 use serenity::prelude::*;
+use SerenityResult;
 
 use typemap;
 use markov;
 
 // -- Constant --
-const MARKOV_ORDER: usize = 2;
+const MARKOV_ORDER: usize = 1;
 
-// -- Types --
-struct MarkovKey;
-
-impl typemap::Key for MarkovKey {
-    type Value = MarkovData;
-}
-
-struct MarkovData {
+// -- Data --
+pub struct Data {
     by_user: HashMap<UserId, markov::Chain<String>>,
 }
 
-impl MarkovData {
+impl Data {
     pub fn new() -> Self {
-        MarkovData {
+        Data {
             by_user: HashMap::new(),
         }
     }
 }
 
 // -- Module --
-pub fn init(client: &mut Client) -> Result<(), SerenityError> {
-    let mut data = client.data.lock();
+pub struct TalkLike;
 
-    let mut data_path = PathBuf::from(::DATA_DIRECTORY);
-    data_path.push("markov");
+impl typemap::Key for TalkLike {
+    type Value = Data;
+}
 
-    let mut markov_data = MarkovData::new();
+pub fn init_client(client: &mut Client, data_dir: &Path) -> SerenityResult<()> {
+    let mut module_data = Data::new();
 
-    if data_path.is_dir() {
-        for entry in fs::read_dir(data_path)? {
+    if data_dir.is_dir() {
+        for entry in data_dir.read_dir()? {
             let entry = entry?;
             let path = entry.path();
 
-            println!("Loading {}", path.display());
+            if path.is_file() {
+                info!("Loading {}", path.display());
 
-            let user_id = UserId(path.file_stem().unwrap().to_str().unwrap().parse()?);
+                let file_stem = path.file_stem();
+                if let None = file_stem {
+                    error!("Could not get file stem");
+                    continue;
+                }
+                let file_stem = file_stem.unwrap();
 
-            match markov::Chain::load(&path) {
-                Ok(chain) => { markov_data.by_user.insert(user_id, chain); },
-                Err(e) => println!("Error loading {}: {:?}", path.display(), e),
+                let file_stem_string = file_stem.to_str();
+                if let None = file_stem_string {
+                    error!("File stem is not valid Unicode");
+                    continue;
+                }
+                let file_stem_string = file_stem_string.unwrap();
+
+                let user_id_num = file_stem_string.parse::<u64>();
+                if let Err(err) = user_id_num {
+                    error!("Could not parse file stem into an integer: {:?}", err);
+                    continue;
+                }
+
+                let user_id = UserId(user_id_num.unwrap());
+
+                match markov::Chain::load(&path) {
+                    Ok(chain) => { module_data.by_user.insert(user_id, chain); }
+                    Err(err) => { error!("Failed to load {}: {:?}", path.display(), err); }
+                }
             }
-
         }
     }
 
-    data.insert::<MarkovKey>(MarkovData::new());
+    {
+        let mut client_data = client.data.lock();
+        client_data.insert::<TalkLike>(module_data);
+    }
 
     Ok(())
 }
 
-pub fn save(ctx: &Context) -> Result<(), SerenityError> {
-    let mut data = ctx.data.lock();
-    let markov_data = data.get_mut::<MarkovKey>().unwrap();
+pub fn init_framework(framework: StandardFramework) -> StandardFramework {
+    framework
+        .simple_bucket("talklikegen", 1)
+        .command("talklikeme", |c| c
+                .cmd(commands::talklikeme)
+                .bucket("talklikegen"))
+}
 
-    let mut path = PathBuf::from(::DATA_DIRECTORY);
-    path.push("markov");
+pub fn save_data(ctx: &Context, data_dir: &Path) -> SerenityResult<()> {
+    let mut client_data = ctx.data.lock();
+    let module_data = client_data.get_mut::<TalkLike>().unwrap();
 
+    let mut path = PathBuf::from(data_dir);
     fs::create_dir_all(&path)?;
 
-    for (user_id, chain) in &markov_data.by_user {
-
+    for (user_id, chain) in &module_data.by_user {
         path.push(format!("{}", user_id));
         path.set_extension("chain");
 
-        match chain.save(path.as_path()) {
-            Ok(()) => println!("Saved {}", path.display()),
-            Err(e) => println!("Failed to save {}: {:?}", path.display(), e),
+        match chain.save(&path) {
+            Ok(()) => info!("Saved {}", path.display()),
+            Err(e) => error!("Failed to save {}: {:?}", path.display(), e),
         }
 
         path.pop();
@@ -94,16 +120,18 @@ pub fn save(ctx: &Context) -> Result<(), SerenityError> {
 }
 
 pub fn on_message(ctx: &Context, msg: &Message) {
-    let mut data = ctx.data.lock();
-    let markov_data = data.get_mut::<MarkovKey>().unwrap();
+    let mut client_data = ctx.data.lock();
+    let module_data = client_data.get_mut::<TalkLike>().unwrap();
 
-    let chain = markov_data.by_user.entry(msg.author.id).or_insert(markov::Chain::of_order(MARKOV_ORDER));
+    let chain = module_data.by_user.entry(msg.author.id).or_insert(markov::Chain::of_order(MARKOV_ORDER));
     chain.feed_str(&msg.content);
 }
 
+
+
 // -- Commands --
-pub mod commands {
-    use super::MarkovKey;
+mod commands {
+    use super::TalkLike;
 
     command!(
         talklikeme(ctx, msg, _args) {
@@ -111,11 +139,11 @@ pub mod commands {
 
             let returned_message = {
                 let mut data = ctx.data.lock();
-                let mut markov_data = data.get_mut::<MarkovKey>().unwrap();
+                let mut module_data = data.get_mut::<TalkLike>().unwrap();
 
-                let user_has_chain = markov_data.by_user.contains_key(&user_id);
+                let user_has_chain = module_data.by_user.contains_key(&user_id);
                 if user_has_chain {
-                    let user_chain = markov_data.by_user.get(&user_id).unwrap();
+                    let user_chain = module_data.by_user.get(&user_id).unwrap();
                     user_chain.generate_str()
                 } else {
                     format!("Sorry, I don't have a record of you saying anything.")
