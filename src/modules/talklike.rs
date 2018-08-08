@@ -186,6 +186,7 @@ mod commands {
                     let user_chain = module_data.by_user.get(&user_id).unwrap();
                     user_chain.generate_str()
                 } else {
+                    // TODO: Replace "you" with other person if user id is not yours.
                     format!("Sorry, I don't have a record of you saying anything.")
                 }
             };
