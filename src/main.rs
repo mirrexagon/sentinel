@@ -45,7 +45,7 @@ impl EventHandler for Handler {
     }
 
     fn ready(&self, _: Context, ready: Ready) {
-        println!("{} is connected!", ready.user.name);
+        info!("{} is connected!", ready.user.name);
     }
 }
 
@@ -56,7 +56,6 @@ fn main() {
     // ---
 
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
-    info!("Token: {}", token);
     let mut client = Client::new(&token, Handler).expect("Err creating client");
 
     // Get hashset of owners for the framework.
@@ -80,11 +79,11 @@ fn main() {
                 .owners(owners)
         })
         .after(|_, _, command_name, error| match error {
-            Ok(()) => println!("Processed command '{}'", command_name),
-            Err(why) => println!("Command '{}' returned error {:?}", command_name, why),
+            Ok(()) => info!("Processed command '{}'", command_name),
+            Err(why) => error!("Command '{}' returned error {:?}", command_name, why),
         })
         .unrecognised_command(|_, _, unknown_command_name| {
-            println!("Could not find command named '{}'", unknown_command_name);
+            info!("Could not find command named '{}'", unknown_command_name);
         })
         .on_dispatch_error(|_ctx, msg, error| {
             if let DispatchError::RateLimited(seconds) = error {
@@ -106,7 +105,7 @@ fn main() {
     // Start!
     client.with_framework(framework);
     if let Err(why) = client.start() {
-        println!("Client error: {:?}", why);
+        error!("Client error: {:?}", why);
     }
 }
 

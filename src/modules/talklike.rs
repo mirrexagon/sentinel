@@ -220,7 +220,7 @@ mod commands {
             };
 
             if let Err(why) = msg.channel_id.say(&returned_message) {
-                println!("Error sending talklike message: {:?}", why);
+                error!("Error sending talklike message: {:?}", why);
             }
         }
     );
