@@ -101,9 +101,11 @@ pub fn init_framework(framework: StandardFramework) -> StandardFramework {
         .simple_bucket("talklikegen", 1)
         .command("talk like", |c| {
             c.cmd(commands::talk_like).bucket("talklikegen")
+            .desc("Have the bot generate some text based on what a user has said. Try `talk like me` and `talk like @user`.")
         })
         .command("clear my talk data", |c| {
             c.cmd(commands::clear_my_talk_data)
+            .desc("Clears the data used to generate text when `talk like` is used on you.")
         })
 }
 
