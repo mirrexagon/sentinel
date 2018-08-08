@@ -158,7 +158,7 @@ mod commands {
                         match args.single_n::<String>() {
                             Ok(s) => if s == "me" { msg.author.id } else {
                                 if let Err(_) = msg.channel_id.say(
-                                    "I didn't understand. Try `talk like me` or `talk like <@mention>`") {
+                                    "I didn't understand. Try `talk like me` or `talk like @user`.") {
                                     error!("Error sending error reponse to `talk like`");
                                 }
 
