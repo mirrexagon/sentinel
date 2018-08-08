@@ -163,7 +163,9 @@ mod commands {
                 let mut data = ctx.data.lock();
                 let mut module_data = data.get_mut::<TalkLike>().unwrap();
 
-                module_data.by_user.remove(&msg.author.id);
+                // Replace with a blank chain.
+                // It was either this or remove it and delete the file.
+                module_data.by_user.insert(msg.author.id, markov::Chain::of_order(MARKOV_ORDER))
                 data_dir = module_data.data_dir.clone();
             }
 
