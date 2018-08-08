@@ -22,8 +22,8 @@ use modules::talklike;
 // -- Use --
 use std::collections::HashSet;
 use std::env;
-use std::process;
 use std::path::Path;
+use std::process;
 
 use serenity::framework::standard::{
     help_commands, Args, CommandOptions, DispatchError, HelpBehaviour, StandardFramework,
@@ -34,7 +34,7 @@ use serenity::model::gateway::Ready;
 use serenity::prelude::*;
 
 // -- Type aliases --
-pub type SerenityResult<T> = Result<T, SerenityError>;
+type SerenityResult<T> = Result<T, SerenityError>;
 
 // -- Handler --
 struct Handler;
@@ -56,6 +56,7 @@ fn main() {
     // ---
 
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
+    info!("Token: {}", token);
     let mut client = Client::new(&token, Handler).expect("Err creating client");
 
     // Get hashset of owners for the framework.
@@ -99,7 +100,8 @@ fn main() {
 
     // Init the modules.
     framework = talklike::init_framework(framework);
-    talklike::init_client(&mut client, Path::new("data/talklike")).expect("Failed to init talklike");
+    talklike::init_client(&mut client, Path::new("data/talklike"))
+        .expect("Failed to init talklike");
 
     // Start!
     client.with_framework(framework);

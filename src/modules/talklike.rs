@@ -4,18 +4,19 @@
 // what they say per server.
 
 // -- Use --
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::collections::HashMap;
 
-use serenity::model::id::UserId;
-use serenity::model::channel::Message;
 use serenity::framework::standard::StandardFramework;
+use serenity::model::channel::Message;
+use serenity::model::id::UserId;
 use serenity::prelude::*;
+use serenity::CACHE;
 use SerenityResult;
 
-use typemap;
 use markov;
+use typemap;
 
 // -- Constant --
 const MARKOV_ORDER: usize = 1;
@@ -74,8 +75,12 @@ pub fn init_client(client: &mut Client, data_dir: &Path) -> SerenityResult<()> {
                 let user_id = UserId(user_id_num.unwrap());
 
                 match markov::Chain::load(&path) {
-                    Ok(chain) => { module_data.by_user.insert(user_id, chain); }
-                    Err(err) => { error!("Failed to load {}: {:?}", path.display(), err); }
+                    Ok(chain) => {
+                        module_data.by_user.insert(user_id, chain);
+                    }
+                    Err(err) => {
+                        error!("Failed to load {}: {:?}", path.display(), err);
+                    }
                 }
             }
         }
@@ -92,9 +97,9 @@ pub fn init_client(client: &mut Client, data_dir: &Path) -> SerenityResult<()> {
 pub fn init_framework(framework: StandardFramework) -> StandardFramework {
     framework
         .simple_bucket("talklikegen", 1)
-        .command("talklikeme", |c| c
-                .cmd(commands::talklikeme)
-                .bucket("talklikegen"))
+        .command("talklikeme", |c| {
+            c.cmd(commands::talklikeme).bucket("talklikegen")
+        })
 }
 
 pub fn save_data(ctx: &Context, data_dir: &Path) -> SerenityResult<()> {
@@ -119,15 +124,25 @@ pub fn save_data(ctx: &Context, data_dir: &Path) -> SerenityResult<()> {
     Ok(())
 }
 
-pub fn on_message(ctx: &Context, msg: &Message) {
-    let mut client_data = ctx.data.lock();
-    let module_data = client_data.get_mut::<TalkLike>().unwrap();
-
-    let chain = module_data.by_user.entry(msg.author.id).or_insert(markov::Chain::of_order(MARKOV_ORDER));
-    chain.feed_str(&msg.content);
+fn should_process_message(msg: &Message) -> bool {
+    // TODO: Figure out properly whether the message is a command.
+    !msg.content.starts_with(".") && !msg.content.starts_with(&CACHE.read().user.mention())
 }
 
+pub fn on_message(ctx: &Context, msg: &Message) {
+    if should_process_message(msg) {
+        let mut client_data = ctx.data.lock();
+        let module_data = client_data.get_mut::<TalkLike>().unwrap();
 
+        let chain = module_data
+            .by_user
+            .entry(msg.author.id)
+            .or_insert(markov::Chain::of_order(MARKOV_ORDER));
+        chain.feed_str(&msg.content);
+    } else {
+        info!("talklike not processing message: {}", msg.content);
+    }
+}
 
 // -- Commands --
 mod commands {
