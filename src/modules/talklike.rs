@@ -153,8 +153,9 @@ pub fn on_message(ctx: &Context, msg: &Message) {
 
 // -- Commands --
 mod commands {
-    use super::TalkLike;
+    use super::{TalkLike, MARKOV_ORDER};
     use serenity::model::prelude::*;
+    use markov;
 
     command!(
         clear_my_talk_data(ctx, msg, _args) {
@@ -165,7 +166,7 @@ mod commands {
 
                 // Replace with a blank chain.
                 // It was either this or remove it and delete the file.
-                module_data.by_user.insert(msg.author.id, markov::Chain::of_order(MARKOV_ORDER))
+                module_data.by_user.insert(msg.author.id, markov::Chain::of_order(MARKOV_ORDER));
                 data_dir = module_data.data_dir.clone();
             }
 
