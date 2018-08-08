@@ -156,14 +156,16 @@ mod commands {
 
     command!(
         clear_my_talk_data(ctx, msg, _args) {
+            let data_dir;
             {
                 let mut data = ctx.data.lock();
                 let mut module_data = data.get_mut::<TalkLike>().unwrap();
 
                 module_data.by_user.remove(&msg.author.id);
+                data_dir = module_data.data_dir.clone();
             }
 
-            super::save_data(&ctx, &module_data.data_dir)
+            super::save_data(&ctx, &data_dir)
                 .map_err(|err| error!("Error saving talklike data after clear: {:?}", err));
 
             if let Err(_) = msg.channel_id.say("Your talking database has been cleared.") {
