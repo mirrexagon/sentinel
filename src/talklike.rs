@@ -1,4 +1,5 @@
 // Ideas:
+// - Ignore commands.
 // - Make it per user per server? Users would expect it to keep
 // what they say per server.
 
