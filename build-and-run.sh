@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-cargo build --release && ./target/release/sentinel
+cargo build --release && env RUST_LOG=info ./target/release/sentinel
