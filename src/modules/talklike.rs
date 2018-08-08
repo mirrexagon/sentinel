@@ -155,17 +155,24 @@ mod commands {
                 match args.single_n::<UserId>() {
                     Ok(user_id) => user_id,
                     Err(_) => {
-                        if args.single_n::<String>().unwrap() == "me" {
-                            msg.author.id
-                        } else {
-                            if let Err(_) = msg.channel_id.say(
-                                "I didn't understand. Try `talk like me` or `talk like <@mention>`") {
-                                error!("Error sending error reponse to `talk like`");
+                        match args.single_n::<String>() {
+                            Ok(s) => if s == "me" { msg.author.id } else {
+                                if let Err(_) = msg.channel_id.say(
+                                    "I didn't understand. Try `talk like me` or `talk like <@mention>`") {
+                                    error!("Error sending error reponse to `talk like`");
+                                }
+
+                                return Ok(());
+                            },
+                            _ => {
+                                if let Err(_) = msg.channel_id.say(
+                                    "I didn't understand. Try `talk like me` or `talk like <@mention>`") {
+                                    error!("Error sending error reponse to `talk like`");
+                                }
+
+                                return Ok(());
                             }
-
-                            return Ok(());
                         }
-
                     }
                 }
             };
