@@ -114,13 +114,16 @@ fn main() {
 fn save_data(ctx: &Context) {
     info!("Saving all modules' data");
     if let Err(err) = talklike::save_data(ctx, Path::new("data/talklike")) {
-        error!("Failed to save talklike data: {:?}", err);
+        error!("Error saving talklike data: {:?}", err);
     }
 }
 
 command!(
-    cmd_save(ctx, _msg, _args) {
+    cmd_save(ctx, msg, _args) {
         save_data(&ctx);
+        if let Err(err) = msg.channel_id.say("Saved!") {
+            error!("Error sending saved message: {:?}", err);
+        }
     }
 );
 
@@ -129,7 +132,7 @@ command!(
         save_data(&ctx);
 
         if let Err(err) = msg.channel_id.say("Bye!") {
-            error!("Failed to say bye: {:?}", err);
+            error!("Error saying bye: {:?}", err);
         }
         ctx.quit();
         process::exit(0);
