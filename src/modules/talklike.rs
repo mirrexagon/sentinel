@@ -9,8 +9,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use serenity::framework::standard::StandardFramework;
-use serenity::model::channel::Message;
-use serenity::model::id::UserId;
+use serenity::model::prelude::*;
 use serenity::prelude::*;
 use serenity::CACHE;
 use SerenityResult;
@@ -97,8 +96,8 @@ pub fn init_client(client: &mut Client, data_dir: &Path) -> SerenityResult<()> {
 pub fn init_framework(framework: StandardFramework) -> StandardFramework {
     framework
         .simple_bucket("talklikegen", 1)
-        .command("talklikeme", |c| {
-            c.cmd(commands::talklikeme).bucket("talklikegen")
+        .command("talk like", |c| {
+            c.cmd(commands::talk_like).bucket("talklikegen")
         })
 }
 
@@ -147,10 +146,29 @@ pub fn on_message(ctx: &Context, msg: &Message) {
 // -- Commands --
 mod commands {
     use super::TalkLike;
+    use serenity::model::prelude::*;
 
     command!(
-        talklikeme(ctx, msg, _args) {
-            let user_id = msg.author.id;
+        talk_like(ctx, msg, args) {
+            let user_id = {
+                // The first argument should be a user mention or "me".
+                match args.single_n::<UserId>() {
+                    Ok(user_id) => user_id,
+                    Err(_) => {
+                        if args.single_n::<String>().unwrap() == "me" {
+                            msg.author.id
+                        } else {
+                            if let Err(_) = msg.channel_id.say(
+                                "I didn't understand. Try `talk like me` or `talk like <@mention>`") {
+                                error!("Error sending error reponse to `talk like`");
+                            }
+
+                            return Ok(());
+                        }
+
+                    }
+                }
+            };
 
             let returned_message = {
                 let mut data = ctx.data.lock();
@@ -166,7 +184,7 @@ mod commands {
             };
 
             if let Err(why) = msg.channel_id.say(&returned_message) {
-                println!("Failed to send message: {:?}", why);
+                println!("Error sending talklike message: {:?}", why);
             }
         }
     );
