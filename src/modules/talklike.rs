@@ -156,10 +156,13 @@ mod commands {
 
     command!(
         clear_my_talk_data(ctx, msg, _args) {
-            let mut data = ctx.data.lock();
-            let mut module_data = data.get_mut::<TalkLike>().unwrap();
+            {
+                let mut data = ctx.data.lock();
+                let mut module_data = data.get_mut::<TalkLike>().unwrap();
 
-            module_data.by_user.remove(&msg.author.id);
+                module_data.by_user.remove(&msg.author.id);
+            }
+
             super::save_data(&ctx, &module_data.data_dir)
                 .map_err(|err| error!("Error saving talklike data after clear: {:?}", err));
 
