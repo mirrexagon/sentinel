@@ -133,7 +133,9 @@ command!(
         if let Err(err) = msg.channel_id.say("Bye!") {
             error!("Error saying bye: {:?}", err);
         }
-        ctx.quit();
+
+        ctx.shard.shutdown_clean();
+        
         process::exit(0);
     }
 );
