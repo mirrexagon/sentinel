@@ -11,5 +11,5 @@ markov = "1.0"
 typemap = "0.3"
 
 [dependencies.serenity]
-version = "0.5.5"
+version = "0.5"
 features = ["voice"]
