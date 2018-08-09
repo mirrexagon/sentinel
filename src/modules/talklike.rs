@@ -176,7 +176,7 @@ mod commands {
                 .map_err(|err| error!("Error saving talklike data after clear: {:?}", err));
 
             if let Err(_) = msg.channel_id.say("Your talking database has been cleared.") {
-                error!("Error sending error reponse to clearinga user's talklike data");
+                error!("Error sending error reponse to clear a user's talklike data");
             }
         }
     );
@@ -220,7 +220,9 @@ mod commands {
                     user_chain.generate_str()
                 } else {
                     // TODO: Replace "you" with other person if user id is not yours.
-                    format!("Sorry, I don't have a record of you saying anything.")
+                    format!("Sorry, I don't have a record of {} saying anything.",
+                           if user_id == msg.author.id { "you".to_owned() }
+                           else { user_id.mention() })
                 }
             };
 
