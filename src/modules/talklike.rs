@@ -135,7 +135,7 @@ pub fn save_data(ctx: &Context, data_dir: &Path) -> SerenityResult<()> {
 
 fn should_process_message(msg: &Message) -> bool {
     // TODO: Figure out properly whether the message is a command.
-    !msg.content.starts_with(".") && !msg.content.starts_with(&CACHE.read().user.mention())
+    !(msg.author.id == CACHE.read().user.id) && !msg.content.starts_with(".") && !msg.content.starts_with(&CACHE.read().user.mention())
 }
 
 pub fn on_message(ctx: &Context, msg: &Message) {
