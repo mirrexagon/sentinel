@@ -115,7 +115,10 @@ pub fn init_framework(framework: StandardFramework) -> StandardFramework {
             c.cmd(commands::talk_like).bucket("talklikegen")
             .desc("Have the bot generate some text based on what a user has said. Try `talk like me` and `talk like @user`.")
         })
-        .command("clear my talk data", |c| {
+        .command("speak like", |c| {
+            c.cmd(commands::speak_like).bucket("talklikegen")
+            .desc("Have the bot generate some text based on what a user has said, and TTS it. Try `talk like me` and `talk like @user`.")
+        })        .command("clear my talk data", |c| {
             c.cmd(commands::clear_my_talk_data)
             .desc("Clears the data used to generate text when `talk like` is used on you.")
         })
@@ -173,7 +176,7 @@ mod commands {
     use markov;
 
 
-    fn talk_like_wrapper(ctx: &mut Context, msg: &Message, args: Args, tts: bool) -> SerenityResult<()> {
+    fn talk_like_wrapper(ctx: &mut Context, msg: &Message, mut args: Args, tts: bool) -> SerenityResult<()> {
         // The first argument should be a user mention or "me".
         let user_id = match args.single_n::<UserId>() {
             Ok(user_id) => user_id,
@@ -192,7 +195,9 @@ mod commands {
             }
         };
 
-        let num_messages = match args.single_n::<usize>() {
+        args.skip();
+
+        let num_messages = match args.single::<usize>() {
             Ok(n @ 1 ... MAX_GENERATE_MESSAGES) => n,
             Ok(0) => {
                 check_msg(msg.channel_id.say("Generating zero messages."));
