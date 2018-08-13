@@ -19,8 +19,10 @@ use SerenityResult;
 use markov;
 use typemap;
 
-// -- Constant --
+// -- Constants --
 const MARKOV_ORDER: usize = 1;
+const MAX_GENERATE_TRIES: usize = 10;
+const MAX_GENERATE_MESSAGES: usize = 5;
 
 // -- Data --
 pub struct Data {
@@ -34,6 +36,14 @@ impl Data {
             by_user: HashMap::new(),
             data_dir: PathBuf::new(), // TODO: Don't store this.
         }
+    }
+}
+
+// -- Helpers --
+/// Checks that a message successfully sent; if not, then logs why.
+fn check_msg(result: SerenityResult<Message>) {
+    if let Err(why) = result {
+        error!("Error sending message: {:?}", why);
     }
 }
 
@@ -155,9 +165,94 @@ pub fn on_message(ctx: &Context, msg: &Message) {
 
 // -- Commands --
 mod commands {
-    use super::{TalkLike, MARKOV_ORDER};
+    use ::SerenityResult;
+    use super::{check_msg, TalkLike, MARKOV_ORDER, MAX_GENERATE_TRIES, MAX_GENERATE_MESSAGES};
+    use serenity::prelude::*;
     use serenity::model::prelude::*;
+    use serenity::framework::standard::{Args, ArgError};
     use markov;
+
+
+    fn talk_like_wrapper(ctx: &mut Context, msg: &Message, args: Args, tts: bool) -> SerenityResult<()> {
+        // The first argument should be a user mention or "me".
+        let user_id = match args.single_n::<UserId>() {
+            Ok(user_id) => user_id,
+            Err(_) => {
+                match args.single_n::<String>() {
+                    Ok(s) => if s == "me" { msg.author.id } else {
+                        check_msg(msg.channel_id.say("I didn't understand. Try `talk like me` or `talk like @user`."));
+                        return Ok(());
+                    },
+                    Err(err) => {
+                        error!("Error parsing args: {}", err);
+                        check_msg(msg.channel_id.say("An error occurred. Maybe try again?"));
+                        return Ok(());
+                    }
+                }
+            }
+        };
+
+        let num_messages = match args.single_n::<usize>() {
+            Ok(n @ 1 ... MAX_GENERATE_MESSAGES) => n,
+            Ok(0) => {
+                check_msg(msg.channel_id.say("Generating zero messages."));
+                return Ok(());
+            }
+            Ok(_) => {
+                check_msg(msg.channel_id.say(&format!("I won't generate more than {} messages.", MAX_GENERATE_MESSAGES)));
+                return Ok(());
+            }
+            Err(err) => {
+                match err {
+                    ArgError::Eos => 1,
+                    _ => {
+                        error!("Error parsing args: {}", err);
+                        check_msg(msg.channel_id.say("An error occurred. Maybe try again?"));
+                        return Ok(());
+                    }
+                }
+            }
+        };
+
+        // ---
+
+        let mut returned_messages = Vec::new();
+
+        {
+            let mut data = ctx.data.lock();
+            let module_data = data.get_mut::<TalkLike>().unwrap();
+
+            if module_data.by_user.contains_key(&user_id) {
+                let user_chain = module_data.by_user.get(&user_id).unwrap();
+
+                for _ in 0..num_messages {
+                    let mut text = None;
+                    for _ in 0..MAX_GENERATE_TRIES {
+                        let gen = user_chain.generate_str();
+                        if gen.chars().count() < 2000 {
+                            text = Some(gen);
+                        }
+                    }
+
+                    if let Some(text) = text {
+                        returned_messages.push(text);
+                    } else {
+                        returned_messages.push(format!("I couldn't generate a message less than 2000 characters (Discord's message size limit)."));
+                    }
+                }
+            } else {
+                returned_messages.push(format!("Sorry, I don't have a record of {} saying anything.",
+                       if user_id == msg.author.id { "you".to_owned() }
+                       else { user_id.mention() }));
+            }
+        };
+
+        for s in returned_messages {
+            check_msg(msg.channel_id.send_message(|m| m.content(&s).tts(tts)));
+        }
+
+        Ok(())
+    }
 
     command!(
         clear_my_talk_data(ctx, msg, _args) {
@@ -175,60 +270,20 @@ mod commands {
             super::save_data(&ctx, &data_dir)
                 .map_err(|err| error!("Error saving talklike data after clear: {:?}", err));
 
-            if let Err(_) = msg.channel_id.say("Your talking database has been cleared.") {
-                error!("Error sending error reponse to clear a user's talklike data");
-            }
+            check_msg(msg.channel_id.say("Your talking database has been cleared."));
+
         }
     );
 
     command!(
         talk_like(ctx, msg, args) {
-            let user_id = {
-                // The first argument should be a user mention or "me".
-                match args.single_n::<UserId>() {
-                    Ok(user_id) => user_id,
-                    Err(_) => {
-                        match args.single_n::<String>() {
-                            Ok(s) => if s == "me" { msg.author.id } else {
-                                if let Err(_) = msg.channel_id.say(
-                                    "I didn't understand. Try `talk like me` or `talk like @user`.") {
-                                    error!("Error sending error reponse to `talk like`");
-                                }
+            talk_like_wrapper(ctx, msg, args, false);
+        }
+    );
 
-                                return Ok(());
-                            },
-                            _ => {
-                                if let Err(_) = msg.channel_id.say(
-                                    "I didn't understand. Try `talk like me` or `talk like <@mention>`") {
-                                    error!("Error sending error reponse to `talk like`");
-                                }
-
-                                return Ok(());
-                            }
-                        }
-                    }
-                }
-            };
-
-            let returned_message = {
-                let mut data = ctx.data.lock();
-                let mut module_data = data.get_mut::<TalkLike>().unwrap();
-
-                let user_has_chain = module_data.by_user.contains_key(&user_id);
-                if user_has_chain {
-                    let user_chain = module_data.by_user.get(&user_id).unwrap();
-                    user_chain.generate_str()
-                } else {
-                    // TODO: Replace "you" with other person if user id is not yours.
-                    format!("Sorry, I don't have a record of {} saying anything.",
-                           if user_id == msg.author.id { "you".to_owned() }
-                           else { user_id.mention() })
-                }
-            };
-
-            if let Err(why) = msg.channel_id.say(&returned_message) {
-                error!("Error sending talklike message: {:?}", why);
-            }
+    command!(
+        speak_like(ctx, msg, args) {
+            talk_like_wrapper(ctx, msg, args, true);
         }
     );
 }
