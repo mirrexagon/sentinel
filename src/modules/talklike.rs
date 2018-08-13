@@ -110,7 +110,7 @@ pub fn init_client(client: &mut Client, data_dir: &Path) -> SerenityResult<()> {
 
 pub fn init_framework(framework: StandardFramework) -> StandardFramework {
     framework
-        .simple_bucket("talklikegen", 1)
+        .simple_bucket("talklikegen", 5)
         .command("talk like", |c| {
             c.cmd(commands::talk_like).bucket("talklikegen")
             .desc("Have the bot generate some text based on what a user has said. Try `talk like me` and `talk like @user`.")
@@ -240,6 +240,7 @@ mod commands {
                         info!("Generated message is {} bytes, {} chars", gen.len(), gen.chars().count());
                         if gen.chars().count() < 2000 {
                             text = Some(gen);
+                            break;
                         }
                     }
 
