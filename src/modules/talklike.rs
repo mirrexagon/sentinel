@@ -237,8 +237,12 @@ mod commands {
                     let mut text = None;
                     for _ in 0..MAX_GENERATE_TRIES {
                         let gen = user_chain.generate_str();
-                        info!("Generated message is {} bytes, {} chars", gen.len(), gen.chars().count());
-                        if gen.chars().count() < 2000 {
+
+                        let num_bytes = gen.len();
+                        let num_chars = gen.chars().count();
+                        info!("Generated message is {} bytes, {} chars", num_bytes, num_chars);
+
+                        if num_chars > 0 && num_chars < 2000 {
                             text = Some(gen);
                             break;
                         }
@@ -247,7 +251,7 @@ mod commands {
                     if let Some(text) = text {
                         returned_messages.push(text);
                     } else {
-                        returned_messages.push(format!("I couldn't generate a message less than 2000 characters (Discord's message size limit)."));
+                        returned_messages.push(format!("I couldn't generate a message greater than 0 characters or less than 2000 characters (Discord's message size limit)."));
                     }
                 }
             } else {
