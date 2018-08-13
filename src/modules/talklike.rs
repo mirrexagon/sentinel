@@ -237,6 +237,7 @@ mod commands {
                     let mut text = None;
                     for _ in 0..MAX_GENERATE_TRIES {
                         let gen = user_chain.generate_str();
+                        info!("Generated message is {} bytes, {} chars", gen.len(), gen.chars().count());
                         if gen.chars().count() < 2000 {
                             text = Some(gen);
                         }
