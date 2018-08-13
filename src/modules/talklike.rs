@@ -168,6 +168,9 @@ pub fn on_message(ctx: &Context, msg: &Message) {
 
 // -- Commands --
 mod commands {
+    use std::thread;
+    use std::time;
+
     use ::SerenityResult;
     use super::{check_msg, TalkLike, MARKOV_ORDER, MAX_GENERATE_TRIES, MAX_GENERATE_MESSAGES};
     use serenity::prelude::*;
@@ -254,6 +257,9 @@ mod commands {
 
         for s in returned_messages {
             check_msg(msg.channel_id.send_message(|m| m.content(&s).tts(tts)));
+
+            let msg_delay = time::Duration::from_millis(500);
+            thread::sleep(msg_delay);
         }
 
         Ok(())
