@@ -4,11 +4,12 @@
 - .clear my talk data - clear a user's talk data
 
 ## Implementation notes
-- Check that generated messages are between 0 and 2000 bytes in length.
+- Check that generated messages are between 0 and 2000 Unicode code points in length. Serenity returns a special error if you try and send a too-long message.
 - Try only a limited number of times to generate messages
+- Don't count commands in talk data
+- Set max generated messages to 5 because rate limiting
+- Content safe for mentions? Serenity has a thing for this
 
 ## Ideas
 - Be able to specify a seed word
 - Be able to specify minimum generated message length
-- Increase multi message limit (how many messages can be generated in once "talk like" call)
-- Re-enable self-learning
