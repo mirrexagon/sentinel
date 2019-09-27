@@ -4,9 +4,9 @@ stdenv.mkDerivation {
   name = "rust-discord-env";
 
   buildInputs = [
-    rustChannels.stable.rust
-    #rustChannels.nightly.rust
-    
+    cargo
+    rustc
+
     pkgconfig
 
     openssl
