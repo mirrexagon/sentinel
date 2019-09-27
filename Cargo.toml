@@ -11,4 +11,4 @@ log = "0.4"
 
 [dependencies.serenity]
 version = "0.7"
-features = ["cache", "framework", "standard_framework", "rustls_backend", "voice"]
+features = ["cache", "framework", "standard_framework", "rustls_backend"]

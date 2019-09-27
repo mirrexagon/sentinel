@@ -1,36 +1,18 @@
-//! Requires the 'framework' feature flag be enabled in your project's
-//! `Cargo.toml`.
-//!
-//! This can be enabled by specifying the feature in the dependency section:
-//!
-//! ```toml
-//! [dependencies.serenity]
-//! git = "https://github.com/serenity-rs/serenity.git"
-//! features = ["framework", "standard_framework"]
-//! ```
 mod commands;
 
-use std::{
-    collections::HashSet,
-    env,
-    sync::Arc,
-};
+use std::{collections::HashSet, env, sync::Arc};
+
 use serenity::{
     client::bridge::gateway::ShardManager,
-    framework::{
-        StandardFramework,
-        standard::macros::group,
-    },
+    framework::{standard::macros::group, StandardFramework},
     model::{event::ResumedEvent, gateway::Ready},
     prelude::*,
 };
+
 use log::{error, info};
 
-use commands::{
-    math::*,
-    meta::*,
-    owner::*,
-};
+use commands::{math::*, meta::*, owner::*};
+
 struct ShardManagerContainer;
 
 impl TypeMapKey for ShardManagerContainer {
@@ -66,8 +48,7 @@ fn main() {
     // `RUST_LOG` to debug`.
     env_logger::init();
 
-    let token = env::var("DISCORD_TOKEN")
-        .expect("Expected a token in the environment");
+    let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
     let mut client = Client::new(&token, Handler).expect("Err creating client");
 
@@ -82,15 +63,15 @@ fn main() {
             set.insert(info.owner.id);
 
             set
-        },
+        }
         Err(why) => panic!("Couldn't get application info: {:?}", why),
     };
 
-    client.with_framework(StandardFramework::new()
-        .configure(|c| c
-            .owners(owners)
-            .prefix("~"))
-        .group(&GENERAL_GROUP));
+    client.with_framework(
+        StandardFramework::new()
+            .configure(|c| c.owners(owners).prefix("~"))
+            .group(&GENERAL_GROUP),
+    );
 
     if let Err(why) = client.start() {
         error!("Client error: {:?}", why);
