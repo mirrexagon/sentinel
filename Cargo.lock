@@ -1128,6 +1128,8 @@ dependencies = [
  "kankyo 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lmarkov 0.1.0 (git+https://github.com/mirrexagon/lmarkov.git)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "serenity 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

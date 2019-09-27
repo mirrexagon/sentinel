@@ -15,13 +15,17 @@ use serenity::{
     prelude::*,
     utils::{content_safe, ContentSafeOptions},
 };
+
 use std::{
     collections::{HashMap, HashSet},
     env,
-    fmt::Write,
+    fs::File,
+    io::{Read, Write},
     sync::Arc,
     thread, time,
 };
+
+use serde::{Deserialize, Serialize};
 
 use log::{error, info};
 
@@ -31,10 +35,15 @@ impl TypeMapKey for ShardManagerContainer {
     type Value = Arc<Mutex<ShardManager>>;
 }
 
-struct TalkLikeData;
+struct TalkLikeKey;
 
-impl TypeMapKey for TalkLikeData {
-    type Value = HashMap<UserId, lmarkov::Chain>;
+#[derive(Debug, Serialize, Deserialize)]
+struct TalkLikeData {
+    data: HashMap<UserId, lmarkov::Chain>,
+}
+
+impl TypeMapKey for TalkLikeKey {
+    type Value = TalkLikeData;
 }
 
 struct Handler;
@@ -52,14 +61,20 @@ impl EventHandler for Handler {
         let mut data = ctx.data.write();
 
         let talk_like_data = data
-            .get_mut::<TalkLikeData>()
-            .expect("Expected TalkLikeData in ShareMap.");
+            .get_mut::<TalkLikeKey>()
+            .expect("Expected TalkLikeKey in ShareMap.");
 
         let entry = talk_like_data
+            .data
             .entry(msg.author.id)
             .or_insert(lmarkov::Chain::new(1));
 
         entry.train(&msg.content);
+
+        // TODO: Handle errors properly.
+        if let Ok(json) = serde_json::to_string(&talk_like_data) {
+            File::create("./data.json").and_then(|mut file| write!(file, "{}", &json));
+        }
     }
 }
 
@@ -68,13 +83,36 @@ fn main() {
 
     env_logger::init();
 
+    let mut loaded_data = None;
+
+    // Load talklike data.
+    // TODO: Handle errors properly.
+    if let Ok(mut file) = File::open("./data.json") {
+        let mut contents = String::new();
+        file.read_to_string(&mut contents);
+
+        let loaded: serde_json::Result<TalkLikeData> = serde_json::from_str(&contents);
+
+        if let Ok(loaded) = loaded {
+            loaded_data = Some(loaded);
+        }
+    }
+
     // Configure the client with your Discord bot token in the environment.
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
     let mut client = Client::new(&token, Handler).expect("Err creating client");
 
     {
         let mut data = client.data.write();
-        data.insert::<TalkLikeData>(HashMap::default());
+
+        if let Some(talk_like_data) = loaded_data {
+            data.insert::<TalkLikeKey>(talk_like_data);
+        } else {
+            data.insert::<TalkLikeKey>(TalkLikeData {
+                data: HashMap::new(),
+            });
+        }
+
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
     }
 
@@ -228,10 +266,10 @@ fn talk_like_wrapper(ctx: &mut Context, msg: &Message, mut args: Args, tts: bool
 
     {
         let data = ctx.data.read();
-        let talk_like_data = data.get::<TalkLikeData>().unwrap();
+        let talk_like_data = data.get::<TalkLikeKey>().unwrap();
 
-        if talk_like_data.contains_key(&user_id) {
-            let user_chain = talk_like_data.get(&user_id).unwrap();
+        if talk_like_data.data.contains_key(&user_id) {
+            let user_chain = talk_like_data.data.get(&user_id).unwrap();
 
             for _ in 0..num_messages {
                 let mut text = None;
