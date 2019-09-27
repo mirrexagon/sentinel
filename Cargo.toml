@@ -1,15 +1,14 @@
 [package]
 name = "sentinel"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Andrew Abbott <mirrexagon@mirrexagon.com>"]
+edition = "2018"
 
 [dependencies]
-log = "0.4.6"
-env_logger = "0.6.1"
-regex = "1.1.6"
-markov = "1.0.2"
-typemap = "0.3.3"
+env_logger = "0.6"
+kankyo = "0.2"
+log = "0.4"
 
 [dependencies.serenity]
-version = "0.5.13"
-features = ["voice"]
+version = "0.7"
+features = ["cache", "framework", "standard_framework", "rustls_backend", "voice"]
