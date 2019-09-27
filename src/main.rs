@@ -106,8 +106,10 @@ fn main() {
         let mut data = client.data.write();
 
         if let Some(talk_like_data) = loaded_data {
+            info!("Successfully loaded talklike data");
             data.insert::<TalkLikeKey>(talk_like_data);
         } else {
+            info!("Could not load talklike data, using empty");
             data.insert::<TalkLikeKey>(TalkLikeData {
                 data: HashMap::new(),
             });
