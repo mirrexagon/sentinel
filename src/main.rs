@@ -176,7 +176,7 @@ fn main() {
 group!({
     name: "general",
     options: {},
-    commands: [talklike, quit]
+    commands: [talklike, speaklike, quit]
 });
 
 #[command]
