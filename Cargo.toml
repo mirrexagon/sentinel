@@ -9,7 +9,9 @@ env_logger = "0.6"
 kankyo = "0.2"
 log = "0.4"
 
-lmarkov = { git = "https://github.com/mirrexagon/lmarkov.git" }
+[dependencies.lmarkov]
+git = "https://github.com/mirrexagon/lmarkov.git"
+features = ["serialization"]
 
 [dependencies.serenity]
 version = "0.7"

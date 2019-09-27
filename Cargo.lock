@@ -570,6 +570,8 @@ version = "0.1.0"
 source = "git+https://github.com/mirrexagon/lmarkov.git#ce6e42d36b1f981d963cf3e076bec4a614d0a096"
 dependencies = [
  "rand 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
