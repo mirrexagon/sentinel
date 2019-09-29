@@ -1,55 +1,32 @@
+mod talklike;
+
+use talklike::*;
+
 use serenity::{
-    client::bridge::gateway::{ShardId, ShardManager},
+    client::bridge::gateway::ShardManager,
     framework::standard::{
-        help_commands,
-        macros::{check, command, group, help},
-        ArgError, Args, CheckResult, CommandGroup, CommandOptions, CommandResult, DispatchError,
-        HelpOptions, StandardFramework, WithWhiteSpace,
+        macros::{command, group},
+        CommandResult, DispatchError, StandardFramework,
     },
-    model::{
-        channel::{Channel, Message},
-        gateway::Ready,
-        id::UserId,
-        prelude::*,
-    },
+    model::{channel::Message, gateway::Ready, prelude::*},
     prelude::*,
-    utils::{content_safe, ContentSafeOptions},
 };
 
 use std::{
     collections::{HashMap, HashSet},
     env,
-    fs::File,
-    io::{Read, Write},
     sync::Arc,
-    thread, time,
 };
 
-use serde::{Deserialize, Serialize};
-
-use log::{error, info};
-
-const MARKOV_CHAIN_ORDER: usize = 2;
+#[allow(unused_imports)]
+use log::{debug, error, info, trace, warn};
 
 struct ShardManagerContainer;
-
 impl TypeMapKey for ShardManagerContainer {
     type Value = Arc<Mutex<ShardManager>>;
 }
 
-struct TalkLikeKey;
-
-#[derive(Debug, Serialize, Deserialize)]
-struct TalkLikeData {
-    data: HashMap<UserId, lmarkov::Chain>,
-}
-
-impl TypeMapKey for TalkLikeKey {
-    type Value = TalkLikeData;
-}
-
 struct Handler;
-
 impl EventHandler for Handler {
     fn ready(&self, _: Context, ready: Ready) {
         info!("Connected as {}", ready.user.name);
@@ -60,49 +37,14 @@ impl EventHandler for Handler {
     }
 
     fn message(&self, ctx: Context, msg: Message) {
-        if should_process_message(&ctx, &msg) {
-            let mut data = ctx.data.write();
-
-            let talk_like_data = data
-                .get_mut::<TalkLikeKey>()
-                .expect("Expected TalkLikeKey in ShareMap.");
-
-            let entry = talk_like_data
-                .data
-                .entry(msg.author.id)
-                .or_insert(lmarkov::Chain::new(MARKOV_CHAIN_ORDER));
-
-            entry.train(&msg.content);
-
-            save_data(&ctx);
-        }
+        talklike::on_message(&ctx, &msg);
     }
-}
-
-fn should_process_message(ctx: &Context, msg: &Message) -> bool {
-    // TODO: Figure out properly whether the message is a command.
-    !msg.content.starts_with(".") && !msg.content.starts_with(&ctx.cache.read().user.mention())
 }
 
 fn main() {
     kankyo::load().expect("Failed to load .env file");
 
     env_logger::init();
-
-    let mut loaded_data = None;
-
-    // Load talklike data.
-    // TODO: Handle errors properly.
-    if let Ok(mut file) = File::open("./data.json") {
-        let mut contents = String::new();
-        file.read_to_string(&mut contents);
-
-        let loaded: serde_json::Result<TalkLikeData> = serde_json::from_str(&contents);
-
-        if let Ok(loaded) = loaded {
-            loaded_data = Some(loaded);
-        }
-    }
 
     // Configure the client with your Discord bot token in the environment.
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
@@ -111,14 +53,15 @@ fn main() {
     {
         let mut data = client.data.write();
 
-        if let Some(talk_like_data) = loaded_data {
-            info!("Successfully loaded talklike data");
-            data.insert::<TalkLikeKey>(talk_like_data);
-        } else {
-            info!("Could not load talklike data, using empty");
-            data.insert::<TalkLikeKey>(TalkLikeData {
-                data: HashMap::new(),
-            });
+        match talklike::load() {
+            Ok(talk_like_data) => {
+                info!("Successfully loaded talklike data");
+                data.insert::<talklike::Key>(talk_like_data);
+            }
+            Err(err) => {
+                error!("Error loading talklike data: {:?}", err);
+                data.insert::<talklike::Key>(HashMap::new());
+            }
         }
 
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
@@ -143,12 +86,7 @@ fn main() {
         // `serenity::ext::framework::Configuration` for all available
         // configurations.
         StandardFramework::new()
-            .configure(|c| {
-                c.by_space(false)
-                    .on_mention(Some(bot_id))
-                    .prefix(".")
-                    .owners(owners)
-            })
+            .configure(|c| c.on_mention(Some(bot_id)).prefix(".").owners(owners))
             // Similar to `before`, except will be called directly _after_
             // command execution.
             .after(|_, _, command_name, error| match error {
@@ -182,7 +120,7 @@ fn main() {
 group!({
     name: "general",
     options: {},
-    commands: [talk_like, speak_like, quit]
+    commands: [talk, speak, clear, quit]
 });
 
 #[command]
@@ -199,160 +137,6 @@ fn quit(ctx: &mut Context, msg: &Message) -> CommandResult {
     }
 
     let _ = msg.reply(&ctx, "Shutting down!");
-
-    Ok(())
-}
-
-fn save_data(ctx: &Context) {
-    let data = ctx.data.read();
-    let talk_like_data = data.get::<TalkLikeKey>().unwrap();
-
-    // TODO: Handle errors properly.
-    if let Ok(json) = serde_json::to_string(talk_like_data) {
-        File::create("./data.json").and_then(|mut file| write!(file, "{}", &json));
-    }
-}
-
-#[command]
-fn clear(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    {
-        let mut data = ctx.data.write();
-        let talk_like_data = data.get_mut::<TalkLikeKey>().unwrap();
-
-        // Replace with a blank chain.
-        // It was either this or remove it and delete the file.
-        talk_like_data
-            .data
-            .insert(msg.author.id, lmarkov::Chain::new(MARKOV_CHAIN_ORDER));
-
-        save_data(ctx);
-    }
-
-    msg.channel_id
-        .say(ctx, "Your talking database has been cleared.")?;
-
-    Ok(())
-}
-
-#[command]
-fn talk_like(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    talk_like_wrapper(ctx, msg, args, false)
-}
-
-#[command]
-fn speak_like(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    talk_like_wrapper(ctx, msg, args, true)
-}
-
-const MAX_GENERATE_MESSAGES: usize = 5;
-const MAX_GENERATE_TRIES: usize = 10;
-
-fn talk_like_wrapper(ctx: &mut Context, msg: &Message, mut args: Args, tts: bool) -> CommandResult {
-    // The first argument should be a user mention or "me".
-    let user_id = match args.single::<UserId>() {
-        Ok(user_id) => user_id,
-        Err(_) => match args.single::<String>() {
-            Ok(s) => {
-                if s == "me" {
-                    msg.author.id
-                } else {
-                    msg.channel_id.say(
-                        &ctx,
-                        "I didn't understand. Try `talk like me` or `talk like @user`.",
-                    )?;
-                    return Ok(());
-                }
-            }
-            Err(err) => {
-                error!("Error parsing args: {}", err);
-                msg.channel_id
-                    .say(&ctx, "An error occurred. Maybe try again?")?;
-                return Ok(());
-            }
-        },
-    };
-
-    let num_messages = match args.single::<usize>() {
-        Ok(n @ 1..=MAX_GENERATE_MESSAGES) => n,
-        Ok(0) => {
-            msg.channel_id.say(&ctx, "Generating zero messages.")?;
-            return Ok(());
-        }
-        Ok(_) => {
-            msg.channel_id.say(
-                &ctx,
-                &format!(
-                    "I won't generate more than {} messages.",
-                    MAX_GENERATE_MESSAGES
-                ),
-            )?;
-            return Ok(());
-        }
-        Err(err) => match err {
-            ArgError::Eos => 1,
-            _ => {
-                error!("Error parsing args: {}", err);
-                msg.channel_id
-                    .say(&ctx, "An error occurred. Maybe try again?")?;
-                return Ok(());
-            }
-        },
-    };
-
-    // ---
-
-    let mut returned_messages = Vec::new();
-
-    {
-        let data = ctx.data.read();
-        let talk_like_data = data.get::<TalkLikeKey>().unwrap();
-
-        if talk_like_data.data.contains_key(&user_id) {
-            let user_chain = talk_like_data.data.get(&user_id).unwrap();
-
-            for _ in 0..num_messages {
-                let mut text = None;
-                for _ in 0..MAX_GENERATE_TRIES {
-                    let gen = user_chain.generate();
-
-                    let num_bytes = gen.len();
-                    let num_chars = gen.chars().count();
-                    info!(
-                        "Generated message is {} bytes, {} chars",
-                        num_bytes, num_chars
-                    );
-
-                    if num_chars > 0 && num_chars < 2000 {
-                        text = Some(gen);
-                        break;
-                    }
-                }
-
-                if let Some(text) = text {
-                    returned_messages.push(text);
-                } else {
-                    returned_messages.push(format!("I couldn't generate a message greater than 0 characters or less than 2000 characters (Discord's message size limit)."));
-                }
-            }
-        } else {
-            returned_messages.push(format!(
-                "Sorry, I don't have a record of {} saying anything.",
-                if user_id == msg.author.id {
-                    "you".to_owned()
-                } else {
-                    user_id.mention()
-                }
-            ));
-        }
-    };
-
-    for s in returned_messages {
-        msg.channel_id
-            .send_message(&ctx, |m| m.content(&s).tts(tts))?;
-
-        let msg_delay = time::Duration::from_millis(500);
-        thread::sleep(msg_delay);
-    }
 
     Ok(())
 }
