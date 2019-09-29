@@ -58,24 +58,31 @@ impl EventHandler for Handler {
     }
 
     fn message(&self, ctx: Context, msg: Message) {
-        let mut data = ctx.data.write();
+        if should_process_message(&ctx, &msg) {
+            let mut data = ctx.data.write();
 
-        let talk_like_data = data
-            .get_mut::<TalkLikeKey>()
-            .expect("Expected TalkLikeKey in ShareMap.");
+            let talk_like_data = data
+                .get_mut::<TalkLikeKey>()
+                .expect("Expected TalkLikeKey in ShareMap.");
 
-        let entry = talk_like_data
-            .data
-            .entry(msg.author.id)
-            .or_insert(lmarkov::Chain::new(1));
+            let entry = talk_like_data
+                .data
+                .entry(msg.author.id)
+                .or_insert(lmarkov::Chain::new(1));
 
-        entry.train(&msg.content);
+            entry.train(&msg.content);
 
-        // TODO: Handle errors properly.
-        if let Ok(json) = serde_json::to_string(&talk_like_data) {
-            File::create("./data.json").and_then(|mut file| write!(file, "{}", &json));
+            // TODO: Handle errors properly.
+            if let Ok(json) = serde_json::to_string(&talk_like_data) {
+                File::create("./data.json").and_then(|mut file| write!(file, "{}", &json));
+            }
         }
     }
+}
+
+fn should_process_message(ctx: &Context, msg: &Message) -> bool {
+    // TODO: Figure out properly whether the message is a command.
+    !msg.content.starts_with(".") && !msg.content.starts_with(&ctx.cache.read().user.mention())
 }
 
 fn main() {
