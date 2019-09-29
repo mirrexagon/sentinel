@@ -21,17 +21,9 @@ impl TypeMapKey for Key {
 }
 
 pub fn save(map: &TalkLikeMap) -> std::io::Result<()> {
-    info!("Saving talklike data");
-
     let json = serde_json::to_string(map)?;
     let mut file = File::create("./talklike.json")?;
-
-    info!("Writing: {}", json);
-    write!(&mut file, "{}", &json)?;
-
-    info!("Save OK");
-
-    Ok(())
+    write!(&mut file, "{}", &json)
 }
 
 pub fn load() -> std::io::Result<TalkLikeMap> {
@@ -60,6 +52,7 @@ pub fn on_message(ctx: &Context, msg: &Message) {
 
         entry.train(&msg.content);
 
+        info!("Saving talklike data");
         if let Err(err) = save(talk_like_data) {
             error!("Error saving data: {:?}", err);
 
@@ -73,9 +66,8 @@ pub fn on_message(ctx: &Context, msg: &Message) {
 }
 
 fn should_process_message(ctx: &Context, msg: &Message) -> bool {
-    // TODO: Figure out properly whether the message is a command.
     info!("Checking message: {}", msg.content);
-    let allowed = !(msg.content.starts_with(".")
+    let allowed = !(msg.content.starts_with(super::COMMAND_PREFIX)
         || msg.content.starts_with(&ctx.cache.read().user.mention()));
 
     info!("Message allowed: {}", allowed);
@@ -101,12 +93,12 @@ fn clear(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
 }
 
 #[command]
-fn talk_like(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+fn mimic(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     talk_like_wrapper(ctx, msg, args, false)
 }
 
 #[command]
-fn speak_like(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+fn mimictts(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     talk_like_wrapper(ctx, msg, args, true)
 }
 

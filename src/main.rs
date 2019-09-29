@@ -1,6 +1,6 @@
 mod talk_like;
 
-use talk_like::{CLEAR_COMMAND, SPEAK_LIKE_COMMAND, TALK_LIKE_COMMAND};
+use talk_like::{CLEAR_COMMAND, MIMICTTS_COMMAND, MIMIC_COMMAND};
 
 use serenity::{
     client::bridge::gateway::ShardManager,
@@ -20,6 +20,8 @@ use std::{
 
 #[allow(unused_imports)]
 use log::{debug, error, info, trace, warn};
+
+const COMMAND_PREFIX: &str = ".";
 
 struct ShardManagerContainer;
 impl TypeMapKey for ShardManagerContainer {
@@ -87,17 +89,22 @@ fn main() {
         // `serenity::ext::framework::Configuration` for all available
         // configurations.
         StandardFramework::new()
-            .configure(|c| c.on_mention(Some(bot_id)).prefix(".").owners(owners))
+            .configure(|c| {
+                c.owners(owners)
+                    .with_whitespace(false)
+                    .prefix(COMMAND_PREFIX)
+                    .on_mention(Some(bot_id))
+            })
             // Similar to `before`, except will be called directly _after_
             // command execution.
             .after(|_, _, command_name, error| match error {
-                Ok(()) => println!("Processed command '{}'", command_name),
-                Err(why) => println!("Command '{}' returned error {:?}", command_name, why),
+                Ok(()) => info!("Processed command '{}'", command_name),
+                Err(why) => info!("Command '{}' returned error {:?}", command_name, why),
             })
             // Set a function that's called whenever an attempted command-call's
             // command could not be found.
             .unrecognised_command(|_, _, unknown_command_name| {
-                println!("Could not find command named '{}'", unknown_command_name);
+                info!("Could not find command named '{}'", unknown_command_name);
             })
             // Set a function that's called whenever a command's execution didn't complete for one
             // reason or another. For example, when a user has exceeded a rate-limit or a command
@@ -114,14 +121,14 @@ fn main() {
     );
 
     if let Err(why) = client.start() {
-        println!("Client error: {:?}", why);
+        error!("Client error: {:?}", why);
     }
 }
 
 group!({
     name: "general",
     options: {},
-    commands: [talk_like, speak_like, clear, quit]
+    commands: [mimic, mimictts, clear, quit]
 });
 
 #[command]
