@@ -95,25 +95,22 @@ fn clear(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
         save(talk_like_data)?;
     }
 
-    msg.channel_id
-        .say(ctx, "Your talking database has been cleared.")?;
+    msg.reply(ctx, "Your talk data has been cleared.")?;
 
     Ok(())
 }
 
 #[command]
-fn talk(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+fn talk_like(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     talk_like_wrapper(ctx, msg, args, false)
 }
 
 #[command]
-fn speak(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+fn speak_like(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     talk_like_wrapper(ctx, msg, args, true)
 }
 
 fn talk_like_wrapper(ctx: &mut Context, msg: &Message, mut args: Args, tts: bool) -> CommandResult {
-    info!("Talk like wrapper");
-
     // The first argument should be a user mention or "me".
     let user_id = match args.single::<UserId>() {
         Ok(user_id) => user_id,

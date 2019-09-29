@@ -1,6 +1,6 @@
 mod talk_like;
 
-use talk_like::{CLEAR_COMMAND, SPEAK_COMMAND, TALK_COMMAND};
+use talk_like::{CLEAR_COMMAND, SPEAK_LIKE_COMMAND, TALK_LIKE_COMMAND};
 
 use serenity::{
     client::bridge::gateway::ShardManager,
@@ -121,7 +121,7 @@ fn main() {
 group!({
     name: "general",
     options: {},
-    commands: [talk, speak, clear, quit]
+    commands: [talk_like, speak_like, clear, quit]
 });
 
 #[command]
