@@ -3,4 +3,4 @@
 
 .env
 
-data.json
+*.json
