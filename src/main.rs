@@ -1,6 +1,6 @@
-mod talklike;
+mod talk_like;
 
-use talklike::*;
+use talk_like::{CLEAR_COMMAND, SPEAK_COMMAND, TALK_COMMAND};
 
 use serenity::{
     client::bridge::gateway::ShardManager,
@@ -37,7 +37,7 @@ impl EventHandler for Handler {
     }
 
     fn message(&self, ctx: Context, msg: Message) {
-        talklike::on_message(&ctx, &msg);
+        talk_like::on_message(&ctx, &msg);
     }
 }
 
@@ -53,15 +53,15 @@ fn main() {
     {
         let mut data = client.data.write();
 
-        match talklike::load() {
+        match talk_like::load() {
             Ok(talk_like_data) => {
-                info!("Successfully loaded talklike data");
-                data.insert::<talklike::Key>(talk_like_data);
+                info!("Successfully loaded talk like data");
+                data.insert::<talk_like::Key>(talk_like_data);
             }
             Err(err) => {
-                error!("Error loading talklike data: {:?}", err);
-                info!("Using empty talklike data");
-                data.insert::<talklike::Key>(HashMap::new());
+                error!("Error loading talk like data: {:?}", err);
+                info!("Using empty talk like data");
+                data.insert::<talk_like::Key>(HashMap::new());
             }
         }
 
