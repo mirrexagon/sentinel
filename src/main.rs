@@ -60,6 +60,7 @@ fn main() {
             }
             Err(err) => {
                 error!("Error loading talklike data: {:?}", err);
+                info!("Using empty talklike data");
                 data.insert::<talklike::Key>(HashMap::new());
             }
         }

@@ -21,11 +21,15 @@ impl TypeMapKey for Key {
 }
 
 pub fn save(map: &TalkLikeMap) -> std::io::Result<()> {
+    info!("Saving talklike data");
+
     let json = serde_json::to_string(map)?;
     let mut file = File::create("./talklike.json")?;
 
-    debug!("Writing: {}", json);
+    info!("Writing: {}", json);
     write!(&mut file, "{}", &json)?;
+
+    info!("Save OK");
 
     Ok(())
 }
@@ -42,7 +46,7 @@ pub fn load() -> std::io::Result<TalkLikeMap> {
 
 pub fn on_message(ctx: &Context, msg: &Message) {
     if should_process_message(&ctx, &msg) {
-        debug!(
+        info!(
             "Processing message '{}' from {}",
             msg.content, msg.author.id
         );
@@ -56,8 +60,6 @@ pub fn on_message(ctx: &Context, msg: &Message) {
 
         entry.train(&msg.content);
 
-        debug!("Hihi");
-
         if let Err(err) = save(talk_like_data) {
             error!("Error saving data: {:?}", err);
 
@@ -65,18 +67,18 @@ pub fn on_message(ctx: &Context, msg: &Message) {
                 .channel_id
                 .say(&ctx, format!("Could not save talk data: {:?}", err));
         } else {
-            debug!("Saved data successfully");
+            info!("Saved data successfully");
         }
     }
 }
 
 fn should_process_message(ctx: &Context, msg: &Message) -> bool {
     // TODO: Figure out properly whether the message is a command.
-    debug!("Checking message: {}", msg.content);
+    info!("Checking message: {}", msg.content);
     let allowed = !(msg.content.starts_with(".")
         || msg.content.starts_with(&ctx.cache.read().user.mention()));
 
-    debug!("Message allowed: {}", allowed);
+    info!("Message allowed: {}", allowed);
     allowed
 }
 
