@@ -29,6 +29,8 @@ use serde::{Deserialize, Serialize};
 
 use log::{error, info};
 
+const MARKOV_CHAIN_ORDER: usize = 2;
+
 struct ShardManagerContainer;
 
 impl TypeMapKey for ShardManagerContainer {
@@ -68,14 +70,11 @@ impl EventHandler for Handler {
             let entry = talk_like_data
                 .data
                 .entry(msg.author.id)
-                .or_insert(lmarkov::Chain::new(1));
+                .or_insert(lmarkov::Chain::new(MARKOV_CHAIN_ORDER));
 
             entry.train(&msg.content);
 
-            // TODO: Handle errors properly.
-            if let Ok(json) = serde_json::to_string(&talk_like_data) {
-                File::create("./data.json").and_then(|mut file| write!(file, "{}", &json));
-            }
+            save_data(&ctx);
         }
     }
 }
@@ -145,9 +144,9 @@ fn main() {
         // configurations.
         StandardFramework::new()
             .configure(|c| {
-                c.on_mention(Some(bot_id))
+                c.by_space(false)
+                    .on_mention(Some(bot_id))
                     .prefix(".")
-                    .delimiter(" ")
                     .owners(owners)
             })
             // Similar to `before`, except will be called directly _after_
@@ -183,7 +182,7 @@ fn main() {
 group!({
     name: "general",
     options: {},
-    commands: [talklike, speaklike, quit]
+    commands: [talk_like, speak_like, quit]
 });
 
 #[command]
@@ -204,17 +203,48 @@ fn quit(ctx: &mut Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
+fn save_data(ctx: &Context) {
+    let data = ctx.data.read();
+    let talk_like_data = data.get::<TalkLikeKey>().unwrap();
+
+    // TODO: Handle errors properly.
+    if let Ok(json) = serde_json::to_string(talk_like_data) {
+        File::create("./data.json").and_then(|mut file| write!(file, "{}", &json));
+    }
+}
+
 #[command]
-fn talklike(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+fn clear(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    {
+        let mut data = ctx.data.write();
+        let talk_like_data = data.get_mut::<TalkLikeKey>().unwrap();
+
+        // Replace with a blank chain.
+        // It was either this or remove it and delete the file.
+        talk_like_data
+            .data
+            .insert(msg.author.id, lmarkov::Chain::new(MARKOV_CHAIN_ORDER));
+
+        save_data(ctx);
+    }
+
+    msg.channel_id
+        .say(ctx, "Your talking database has been cleared.")?;
+
+    Ok(())
+}
+
+#[command]
+fn talk_like(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     talk_like_wrapper(ctx, msg, args, false)
 }
 
 #[command]
-fn speaklike(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+fn speak_like(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     talk_like_wrapper(ctx, msg, args, true)
 }
 
-const MAX_GENERATE_MESSAGES: usize = 10;
+const MAX_GENERATE_MESSAGES: usize = 5;
 const MAX_GENERATE_TRIES: usize = 10;
 
 fn talk_like_wrapper(ctx: &mut Context, msg: &Message, mut args: Args, tts: bool) -> CommandResult {
