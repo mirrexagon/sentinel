@@ -9,7 +9,7 @@ use serenity::model::channel::Message;
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
-const MARKOV_CHAIN_ORDER: usize = 2;
+const MARKOV_CHAIN_ORDER: usize = 1;
 const MAX_GENERATE_MESSAGES: usize = 5;
 const MAX_GENERATE_TRIES: usize = 10;
 
