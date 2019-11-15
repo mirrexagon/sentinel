@@ -10,3 +10,12 @@
 ## Ideas
 - Be able to specify a seed word
 - Be able to specify minimum generated message length
+
+## Bugs
+Don't clear data on sentinel unless there are no args
+
+Cool down on mimic
+
+Update help text for new command
+
+Fix no message when making message when cleared - only need to delete chain, will be remade when user says something
