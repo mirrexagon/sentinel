@@ -11,6 +11,8 @@
 - Be able to specify a seed word
 - Be able to specify minimum generated message length
 
+- Flakeify: https://www.reddit.com/r/rust/comments/mmbfnj/nixifying_a_rust_project/
+
 ## Bugs
 Don't clear data on sentinel unless there are no args
 
