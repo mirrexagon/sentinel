@@ -15,3 +15,7 @@ serenity = "0.10.5"
 [dependencies.lmarkov]
 git = "https://github.com/mirrexagon/lmarkov.git"
 features = ["serialization"]
+
+[dependencies.tokio]
+version = "1.0"
+features = ["macros", "rt-multi-thread"]
