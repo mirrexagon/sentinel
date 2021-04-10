@@ -265,13 +265,11 @@ async fn talk_like_wrapper(ctx: &Context, msg: &Message, mut args: Args, tts: bo
         let data = ctx.data.read().await;
         let chains = data.get::<MarkovChainContainerKey>().expect("Expected MarkovChainContainerKey in TypeMap.");
 
-        if chains.by_user.contains_key(&user_id) {
-            let user_chain = chains.by_user.get(&user_id).unwrap();
-
+        if let Some(user_chain) = chains.by_user.get(&user_id) {
             for _ in 0..num_messages {
                 let mut text = None;
                 for _ in 0..MAX_GENERATE_TRIES {
-                    let gen = user_chain.generate();
+                    let gen = user_chain.generate().unwrap();
 
                     let num_bytes = gen.len();
                     let num_chars = gen.chars().count();

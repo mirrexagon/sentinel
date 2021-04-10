@@ -507,7 +507,7 @@ checksum = "9385f66bf6105b241aa65a61cb923ef20efc665cb9f9bb50ac2f0c4b7f378d41"
 [[package]]
 name = "lmarkov"
 version = "0.1.0"
-source = "git+https://github.com/mirrexagon/lmarkov.git#2b039f3ee7f47d81f68f565a8b8cb5e8d6edd3c3"
+source = "git+https://github.com/mirrexagon/lmarkov.git#b82c44e6f4cb48d14e5524990642a8f124c3a872"
 dependencies = [
  "rand",
  "serde",
@@ -1135,9 +1135,9 @@ dependencies = [
 
 [[package]]
 name = "typemap_rev"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "335fb14412163adc9ed4a3e53335afaa7a4b72bdd122e5f72f51b8f1db1a131e"
+checksum = "ed5b74f0a24b5454580a79abb6994393b09adf0ab8070f15827cb666255de155"
 
 [[package]]
 name = "typenum"
