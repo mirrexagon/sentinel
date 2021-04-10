@@ -117,8 +117,6 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
 
 #[tokio::main]
 async fn main() {
-    kankyo::init().unwrap();
-
     // Configure the client with your Discord bot token in the environment.
     let token = env::var("DISCORD_TOKEN").expect(
         "Expected a token in the environment",
