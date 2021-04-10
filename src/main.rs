@@ -225,7 +225,7 @@ async fn talk_like_wrapper(ctx: &Context, msg: &Message, mut args: Args, tts: bo
             Err(err) => {
                 println!("Error parsing args in talk_like_wrapper(): {}", err);
                 msg.channel_id
-                    .say(ctx, "An error occurred. Maybe try again?").await?;
+                    .say(ctx, "An error occurred.").await?;
                 return Ok(());
             }
         },

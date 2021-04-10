@@ -2,5 +2,6 @@
 **/*.rs.bk
 
 .env
-
 *.json
+
+result*
