@@ -53,23 +53,6 @@ impl EventHandler for Handler {
     async fn ready(&self, _: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
     }
-
-    async fn message(&self, ctx: Context, msg: Message) {
-        println!("Got message: {}", msg.content);
-
-        let mut data = ctx.data.write().await;
-        let chains = data.get_mut::<MarkovChainContainerKey>().expect("Expected MarkovChainContainerKey in TypeMap.");
-
-        {
-            let user_chain = chains.by_user.entry(msg.author.id).or_insert(Chain::new(CHAIN_ORDER_DEFAULT));
-            user_chain.train(&msg.content);
-        }
-
-        match save_chains(chains) {
-            Ok(_) => {},
-            Err(e) => println!("Error saving chains: {:?}", e),
-        }
-    }
 }
 
 #[group]
@@ -98,6 +81,19 @@ async fn unknown_command(_ctx: &Context, _msg: &Message, unknown_command_name: &
 #[hook]
 async fn normal_message(ctx: &Context, msg: &Message) {
     println!("Message is not a command '{}'", msg.content);
+
+    let mut data = ctx.data.write().await;
+    let chains = data.get_mut::<MarkovChainContainerKey>().expect("Expected MarkovChainContainerKey in TypeMap.");
+
+    {
+        let user_chain = chains.by_user.entry(msg.author.id).or_insert(Chain::new(CHAIN_ORDER_DEFAULT));
+        user_chain.train(&msg.content);
+    }
+
+    match save_chains(chains) {
+        Ok(_) => {},
+        Err(e) => println!("Error saving chains: {:?}", e),
+    }
 }
 
 #[hook]
