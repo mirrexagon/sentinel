@@ -217,7 +217,7 @@ async fn talk_like_wrapper(ctx: &Context, msg: &Message, mut args: Args, tts: bo
                 } else {
                     msg.channel_id.say(
                         ctx,
-                        "I didn't understand. Try `talk like me` or `talk like @user`.",
+                        "I didn't understand. Try `.t me` or `.t @user`.",
                     ).await?;
                     return Ok(());
                 }
@@ -231,6 +231,7 @@ async fn talk_like_wrapper(ctx: &Context, msg: &Message, mut args: Args, tts: bo
         },
     };
 
+    // Second argument is optional number of messages.
     let num_messages = match args.single::<usize>() {
         Ok(n @ 1..=MAX_GENERATE_MESSAGES) => n,
         Ok(0) => {
@@ -320,7 +321,7 @@ async fn talk_like_wrapper(ctx: &Context, msg: &Message, mut args: Args, tts: bo
 #[command]
 #[bucket = "talk_like"]
 async fn clear_my_data(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-
+    // TODO
 
     Ok(())
 }
