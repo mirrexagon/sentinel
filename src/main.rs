@@ -1,9 +1,9 @@
-use std::{collections::{HashMap, HashSet}, env, fmt::Write, sync::Arc, io, fs::File};
+use std::{collections::{HashMap, HashSet}, env, fmt::Write, sync::Arc, io, fs::File, time, thread};
 use serenity::{
     async_trait,
     client::bridge::gateway::{ShardId, ShardManager},
     framework::standard::{
-        Args, CommandOptions, CommandResult, CommandGroup,
+        Args, ArgError, CommandOptions, CommandResult, CommandGroup,
         DispatchError, HelpOptions, help_commands, Reason, StandardFramework,
         buckets::{RevertBucket, LimitedFor},
         macros::{command, group, help, check, hook},
@@ -23,10 +23,12 @@ use tokio::sync::Mutex;
 
 use serde::{Serialize, Deserialize};
 
-use lmarkov::Chain;
+use lmarkov::{Chain, ChainKey};
 
-const CHAIN_ORDER_DEFAULT: usize = 1;
 const CHAIN_DATA_FILE_PATH: &'static str = "chains.json";
+const CHAIN_ORDER_DEFAULT: usize = 1;
+const MAX_GENERATE_MESSAGES: usize = 5;
+const MAX_GENERATE_TRIES: usize = 10;
 
 struct ShardManagerContainer;
 impl TypeMapKey for ShardManagerContainer {
@@ -189,13 +191,9 @@ async fn main() {
 // In this example channel mentions are excluded via the `ContentSafeOptions`.
 #[command]
 #[bucket = "talk_like"]
+#[aliases("t")]
 async fn talk_like(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    match generate_text(ctx, msg.author.id, None).await {
-        Some(text) => msg.reply(ctx, text).await?,
-        None => msg.reply(ctx, "Could not generate message").await?,
-    };
-
-    Ok(())
+    talk_like_wrapper(ctx, msg, args, false).await
 }
 
 // Repeats what the user passed as argument but ensures that user and role
@@ -203,20 +201,117 @@ async fn talk_like(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 // In this example channel mentions are excluded via the `ContentSafeOptions`.
 #[command]
 #[bucket = "talk_like"]
+#[aliases("s")]
 async fn speak_like(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-
-
-    Ok(())
+    talk_like_wrapper(ctx, msg, args, true).await
 }
 
-async fn generate_text(ctx: &Context, user_id: UserId, seed_word: Option<&str>) -> Option<String> {
-    let data = ctx.data.read().await;
-    let chains = data.get::<MarkovChainContainerKey>().expect("Expected MarkovChainContainerKey in TypeMap.");
+async fn talk_like_wrapper(ctx: &Context, msg: &Message, mut args: Args, tts: bool) -> CommandResult {
+    // The first argument should be a user mention or "me".
+    let user_id = match args.single::<UserId>() {
+        Ok(user_id) => user_id,
+        Err(_) => match args.single::<String>() {
+            Ok(s) => {
+                if s == "me" {
+                    msg.author.id
+                } else {
+                    msg.channel_id.say(
+                        ctx,
+                        "I didn't understand. Try `talk like me` or `talk like @user`.",
+                    ).await?;
+                    return Ok(());
+                }
+            }
+            Err(err) => {
+                println!("Error parsing args in talk_like_wrapper(): {}", err);
+                msg.channel_id
+                    .say(ctx, "An error occurred. Maybe try again?").await?;
+                return Ok(());
+            }
+        },
+    };
 
-    let user_chain = chains.by_user.get(&user_id)?;
+    let num_messages = match args.single::<usize>() {
+        Ok(n @ 1..=MAX_GENERATE_MESSAGES) => n,
+        Ok(0) => {
+            msg.channel_id.say(&ctx, "Generating zero messages.").await?;
+            return Ok(());
+        }
+        Ok(_) => {
+            msg.channel_id.say(
+                ctx,
+                &format!(
+                    "I won't generate more than {} messages.",
+                    MAX_GENERATE_MESSAGES
+                ),
+            ).await?;
+            return Ok(());
+        }
+        Err(err) => match err {
+            ArgError::Eos => 1,
+            _ => {
+                println!("Error parsing args in talk_like_wrapper(): {}", err);
+                msg.channel_id
+                    .say(&ctx, "An error occurred.").await?;
+                return Ok(());
+            }
+        },
+    };
 
-    // TODO: Use seed word(s)
-    Some(user_chain.generate())
+    let mut returned_messages = Vec::new();
+
+    {
+        let data = ctx.data.read().await;
+        let chains = data.get::<MarkovChainContainerKey>().expect("Expected MarkovChainContainerKey in TypeMap.");
+
+        if chains.by_user.contains_key(&user_id) {
+            let user_chain = chains.by_user.get(&user_id).unwrap();
+
+            for _ in 0..num_messages {
+                let mut text = None;
+                for _ in 0..MAX_GENERATE_TRIES {
+                    let gen = user_chain.generate();
+
+                    let num_bytes = gen.len();
+                    let num_chars = gen.chars().count();
+                    println!(
+                        "Generated message is {} bytes, {} chars",
+                        num_bytes, num_chars
+                    );
+
+                    if num_chars > 0 && num_chars < 2000 {
+                        text = Some(gen);
+                        break;
+                    }
+                }
+
+                if let Some(text) = text {
+                    returned_messages.push(text);
+                } else {
+                    returned_messages.push(format!("I couldn't generate a message greater than 0 characters or less than 2000 characters (Discord's message size limit)."));
+                }
+            }
+        } else {
+            returned_messages.push(format!(
+                "Sorry, I don't have a record of {} saying anything.",
+                if user_id == msg.author.id {
+                    "you".to_owned()
+                } else {
+                    user_id.mention().to_string()
+                }
+            ));
+        }
+    };
+
+    for s in returned_messages {
+        msg.channel_id
+            .send_message(&ctx, |m| m.content(&s).tts(tts)).await?;
+
+        let msg_delay = time::Duration::from_millis(500);
+        thread::sleep(msg_delay);
+    }
+
+    Ok(())
 }
 
 // Repeats what the user passed as argument but ensures that user and role
