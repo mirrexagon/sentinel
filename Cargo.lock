@@ -487,12 +487,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "kankyo"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "325a11231fa70c1d1b562655db757cefb6022876d62f173831f35bd670ae0c40"
-
-[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -851,7 +845,6 @@ name = "sentinel"
 version = "0.1.0"
 dependencies = [
  "env_logger",
- "kankyo",
  "lmarkov",
  "log",
  "serde",

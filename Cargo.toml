@@ -6,7 +6,6 @@ edition = "2018"
 
 [dependencies]
 env_logger = "0.8.3"
-kankyo = "0.3.0"
 log = "0.4.14"
 serde = "1.0.125"
 serde_json = "1.0.64"
