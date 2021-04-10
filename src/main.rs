@@ -146,7 +146,7 @@ async fn main() {
                    .with_whitespace(true)
                    .on_mention(Some(bot_id))
                    .prefix(".")
-                   .delimiters(vec![", ", ","])
+                   .delimiters(vec![" "])
                    .owners(owners))
         .before(before)
         .after(after)
