@@ -6,5 +6,6 @@
 ## TODO
 - Be able to specify a seed word
 - Be able to specify minimum generated message length
-- Have it record its own messages
+- Have it record its own messages but not commands
+- Sanitise messages
 
