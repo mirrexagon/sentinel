@@ -184,9 +184,6 @@ async fn main() {
     }
 }
 
-// Repeats what the user passed as argument but ensures that user and role
-// mentions are replaced with a safe textual alternative.
-// In this example channel mentions are excluded via the `ContentSafeOptions`.
 #[command]
 #[bucket = "talk_like"]
 #[aliases("t")]
@@ -194,9 +191,6 @@ async fn talk_like(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     talk_like_wrapper(ctx, msg, args, false).await
 }
 
-// Repeats what the user passed as argument but ensures that user and role
-// mentions are replaced with a safe textual alternative.
-// In this example channel mentions are excluded via the `ContentSafeOptions`.
 #[command]
 #[bucket = "talk_like"]
 #[aliases("s")]
@@ -301,8 +295,26 @@ async fn talk_like_wrapper(ctx: &Context, msg: &Message, mut args: Args, tts: bo
     };
 
     for s in returned_messages {
+         let settings = if let Some(guild_id) = msg.guild_id {
+           // By default roles, users, and channel mentions are cleaned.
+           ContentSafeOptions::default()
+                // We do not want to clean channel mentions as they
+                // do not ping users.
+                .clean_channel(false)
+                // If it's a guild channel, we want mentioned users to be displayed
+                // as their display name.
+                .display_as_member_from(guild_id)
+        } else {
+            ContentSafeOptions::default()
+                .clean_channel(false)
+        };
+
+        println!("Before: {}", s);
+        let content = content_safe(&ctx.cache, &s, &settings).await;
+        println!("After: {}", content);
+
         msg.channel_id
-            .send_message(&ctx, |m| m.content(&s).tts(tts)).await?;
+            .send_message(&ctx, |m| m.content(&content).tts(tts)).await?;
 
         let msg_delay = time::Duration::from_millis(500);
         thread::sleep(msg_delay);
