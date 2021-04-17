@@ -12,7 +12,7 @@ serde_json = "1.0.64"
 serenity = "0.10.5"
 
 [dependencies.lmarkov]
-git = "https://github.com/mirrexagon/lmarkov.git"
+version = "0.1.0"
 features = ["serialization"]
 
 [dependencies.tokio]
