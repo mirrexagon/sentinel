@@ -39,24 +39,7 @@
               inherit name;
               src = ./.;
             })
-            {
-              # Individual crate overrides go here
-              # Example: https://github.com/balsoft/simple-osd-daemons/blob/6f85144934c0c1382c7a4d3a2bbb80106776e270/flake.nix#L28-L50
-              defaultCrateOverrides = pkgs.defaultCrateOverrides // {
-                # The app crate itself is overriden here. Typically we
-                # configure non-Rust dependencies (see below) here.
-                ${name} = oldAttrs: {
-                  inherit buildInputs nativeBuildInputs;
-                } // buildEnvVars;
-              };
-            };
-
-          # Configuration for the non-Rust dependencies
-          buildInputs = with pkgs; [ openssl.dev ];
-          nativeBuildInputs = with pkgs; [ rustc cargo pkgconfig nixpkgs-fmt ];
-          buildEnvVars = {
-            PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
-          };
+            {};
         in
         rec {
           packages.${name} = project.rootCrate.build;
