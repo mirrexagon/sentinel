@@ -1,16 +1,9 @@
-# https://notes.srid.ca/rust-nix
-
 {
-  description = "A Discord Markov chain bot.";
-
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
+    utils.url = "github:numtide/flake-utils";
 
-    crate2nix = {
-      url = "github:kolloch/crate2nix";
-      flake = false;
-    };
+    naersk.url = "github:nmattia/naersk";
+    naersk.inputs.nixpkgs.follows = "nixpkgs";
 
     flake-compat = {
       url = "github:edolstra/flake-compat";
@@ -18,48 +11,34 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, crate2nix, ... }:
-    let
-      name = "sentinel";
-    in
-    flake-utils.lib.eachDefaultSystem
-      (system:
-        let
-          # Imports
-          pkgs = import nixpkgs {
-            inherit system;
-          };
+  outputs = { self, nixpkgs, utils, naersk, ... }:
+  let
+      pname = "sentinel";
+  in {
+    overlay = final: prev: {
+      "${pname}" = naersk.lib."${final.system}".buildPackage {
+        inherit pname;
+        root = ./.;
+      };
+    };
+  } // (
+    utils.lib.eachDefaultSystem (system: let
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [ self.overlay ];
+      };
+    in rec {
+      packages."${pname}" = pkgs."${pname}";
+      defaultPackage = packages."${pname}";
 
-          inherit (import "${crate2nix}/tools.nix" { inherit pkgs; })
-            generatedCargoNix;
+      apps."${pname}" = utils.lib.mkApp {
+        drv = packages."${pname}";
+      };
+      defaultApp = apps."${pname}";
 
-          # Create the cargo2nix project
-          project = pkgs.callPackage
-            (generatedCargoNix {
-              inherit name;
-              src = ./.;
-            })
-            {};
-        in
-        rec {
-          packages.${name} = project.rootCrate.build;
-
-          # `nix build`
-          defaultPackage = packages.${name};
-
-          # `nix run`
-          apps.${name} = flake-utils.lib.mkApp {
-            inherit name;
-            drv = packages.${name};
-          };
-          defaultApp = apps.${name};
-
-          # `nix develop`
-          devShell = pkgs.mkShell
-            {
-              inherit buildInputs nativeBuildInputs;
-              RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
-            } // buildEnvVars;
-        }
-      );
+      devShell = pkgs.mkShell {
+        nativeBuildInputs = with pkgs; [ rustc cargo ];
+      };
+    })
+  );
 }
