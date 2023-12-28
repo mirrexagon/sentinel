@@ -1,3 +1,5 @@
+- Update to https://github.com/serenity-rs/poise ?
+
 ## Commands
 - .t ( me | <@mention> ) [num up to 5] - generate text from a user's past messages, up to num many texts
 - .s ( me | <@mention> ) [num up to 5] - same as above but TTS

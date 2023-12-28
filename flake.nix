@@ -40,7 +40,7 @@
           defaultApp = apps."${pname}";
 
           devShells.default = pkgs.mkShell {
-            nativeBuildInputs = with pkgs; [ rustc cargo ];
+            nativeBuildInputs = with pkgs; [ rustc cargo cargo-edit ];
           };
         })
     );
